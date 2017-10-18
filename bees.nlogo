@@ -1,11 +1,25 @@
+breed [queens queen]
+breed [larvae larva]
+breed [workers worker]
+
+queens-own [age energy poisoned pregnant]
+larvae-own [age energy poisoned]
+workers-own [age energy poisoned current-action]
+
+to setup
+  clear-all                           ;; clear the screen
+  resize-world 0 hive-size 0 hive-size
+  ask patches [set pcolor yellow]       ;; set the background (patches) to grey
+  reset-ticks
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
 10
-649
-470
-16
-16
+558
+379
+-1
+-1
 13.0
 1
 10
@@ -16,15 +30,47 @@ GRAPHICS-WINDOW
 1
 1
 1
--16
-16
--16
-16
+0
+25
+0
+25
 0
 0
 1
 ticks
 30.0
+
+SLIDER
+10
+12
+182
+45
+hive-size
+hive-size
+0
+500
+25
+1
+1
+patches
+HORIZONTAL
+
+BUTTON
+9
+426
+72
+459
+NIL
+setup
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
