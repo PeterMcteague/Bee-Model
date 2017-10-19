@@ -8,27 +8,85 @@ workers-own [age energy poisoned current-action]
 
 to setup
   clear-all                           ;; clear the screen
+  setup-world
+  setup-food
+  setup-worker
+  setup-queen
+  reset-ticks
+end
+
+to setup-world
   resize-world 0 hive-size 0 hive-size
   ask patches [set pcolor yellow]       ;; set the background (patches) to grey
-  reset-ticks
+  ask patches with [pxcor = 0] [set pcolor grey]
+  ask patches with [pxcor = hive-size] [set pcolor grey]
+  ask patches with [pycor = 0] [set pcolor grey]
+  ask patches with [pycor = hive-size] [set pcolor grey]
+end
+
+to setup-queen
+  create-queens 1
+  ask queens
+  [set color orange
+    set age 0
+    set pregnant false
+    set poisoned false
+    set energy max-energy-queen
+    setxy hive-size / 2 hive-size / 2
+    set shape "queen"
+    set size 1.1
+  ]
+end
+
+to setup-worker
+  create-workers number-of-workers
+  ask workers
+  [set color orange
+    set age 0
+    set size 0.8
+    set poisoned false
+    set current-action ""
+    set energy max-energy-worker
+    move-to one-of patches with [pcolor = yellow]
+    set shape "worker"
+  ]
+end
+
+to setup-food
+  if number-of-food-sources > 0 [ask patches with [pxcor = 1 and pycor = hive-size - 1] [set pcolor blue]]
+  if number-of-food-sources > 1 [ask patches with [pxcor = hive-size - 1 and pycor = hive-size - 1] [set pcolor blue]]
+  if number-of-food-sources > 2 [ask patches with [pxcor = 1 and pycor = 1] [set pcolor blue]]
+  if number-of-food-sources > 3 [ask patches with [pxcor = hive-size - 1 and pycor = 1] [set pcolor blue]]
+  ask n-of number-of-food-sources-poisoned patches with [pcolor = blue] [set pcolor green]
+end
+
+;;Main
+
+to go
+  ;;queen stuff
+  ;;baby stuff
+  ;;worker stuff
+  ;;aging stuff
+  ;;killing stuff
+  tick
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-210
+250
 10
-558
-379
+723
+484
 -1
 -1
-13.0
+17.962
 1
 10
 1
 1
 1
 0
-1
-1
+0
+0
 1
 0
 25
@@ -49,20 +107,277 @@ hive-size
 hive-size
 0
 500
-25
+25.0
 1
 1
 patches
 HORIZONTAL
 
 BUTTON
-9
-426
-72
-459
+747
+10
+810
+43
 NIL
 setup
 NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+12
+56
+184
+89
+number-of-workers
+number-of-workers
+0
+500
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+117
+187
+150
+max-energy-worker
+max-energy-worker
+0
+100
+10.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+17
+159
+189
+192
+max-energy-queen
+max-energy-queen
+0
+100
+10.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+16
+199
+188
+232
+max-energy-larvae
+max-energy-larvae
+0
+100
+10.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+247
+187
+280
+number-of-food-sources
+number-of-food-sources
+0
+4
+4.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+291
+187
+324
+poison-strength-%
+poison-strength-%
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+332
+240
+365
+number-of-food-sources-poisoned
+number-of-food-sources-poisoned
+0
+4
+3.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+17
+374
+201
+407
+food-poison-cycle-ticks
+food-poison-cycle-ticks
+0
+1000
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+419
+187
+452
+food-poison-cycles
+food-poison-cycles
+0
+20
+20.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+461
+217
+494
+food-poison-cycle-gap-ticks
+food-poison-cycle-gap-ticks
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+16
+501
+188
+534
+larvae-ticks-to-birth
+larvae-ticks-to-birth
+0
+100
+5.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+17
+539
+191
+572
+queen-birthing-chance
+queen-birthing-chance
+0
+100
+20.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+19
+581
+191
+614
+honey-energy-gain
+honey-energy-gain
+0
+100
+8.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+19
+623
+191
+656
+max-age-worker
+max-age-worker
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+19
+664
+191
+697
+max-age-queen
+max-age-queen
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+23
+709
+216
+742
+how-often-to-birth-larvae
+how-often-to-birth-larvae
+0
+100
+30.0
+1
+1
+NIL
+HORIZONTAL
+
+BUTTON
+749
+56
+812
+89
+NIL
+go
+T
 1
 T
 OBSERVER
@@ -133,15 +448,6 @@ Polygon -7500403 true true 15 75 15 225 150 285 150 135
 Line -16777216 false 150 285 150 135
 Line -16777216 false 150 135 15 75
 Line -16777216 false 150 135 285 75
-
-bug
-true
-0
-Circle -7500403 true true 96 182 108
-Circle -7500403 true true 110 127 80
-Circle -7500403 true true 110 75 80
-Line -7500403 true 150 100 80 30
-Line -7500403 true 150 100 220 30
 
 butterfly
 true
@@ -259,6 +565,13 @@ Rectangle -16777216 true false 120 210 180 285
 Polygon -7500403 true true 15 120 150 15 285 120
 Line -16777216 false 30 120 270 120
 
+larvae
+false
+0
+Circle -7500403 true true 96 76 108
+Circle -7500403 true true 72 104 156
+Polygon -7500403 true true 221 149 195 101 106 99 80 148
+
 leaf
 false
 0
@@ -300,6 +613,27 @@ Polygon -7500403 true true 165 180 165 210 225 180 255 120 210 135
 Polygon -7500403 true true 135 105 90 60 45 45 75 105 135 135
 Polygon -7500403 true true 165 105 165 135 225 105 255 45 210 60
 Polygon -7500403 true true 135 90 120 45 150 15 180 45 165 90
+
+queen
+true
+0
+Polygon -1184463 true false 195 150 105 150 90 165 90 225 105 270 135 300 165 300 195 270 210 225 210 165 195 150
+Rectangle -16777216 true false 90 165 212 185
+Polygon -16777216 true false 90 207 90 226 210 226 210 207
+Polygon -16777216 true false 103 266 198 266 203 246 96 246
+Polygon -6459832 true false 120 150 105 135 105 75 120 60 180 60 195 75 195 135 180 150
+Polygon -6459832 true false 150 15 120 30 120 60 180 60 180 30
+Circle -16777216 true false 105 30 30
+Circle -16777216 true false 165 30 30
+Polygon -7500403 true true 120 90 75 105 15 90 30 75 120 75
+Polygon -16777216 false false 120 75 30 75 15 90 75 105 120 90
+Polygon -7500403 true true 180 75 180 90 225 105 285 90 270 75
+Polygon -16777216 false false 180 75 270 75 285 90 225 105 180 90
+Polygon -7500403 true true 180 75 180 90 195 105 240 195 270 210 285 210 285 150 255 105
+Polygon -16777216 false false 180 75 255 105 285 150 285 210 270 210 240 195 195 105 180 90
+Polygon -7500403 true true 120 75 45 105 15 150 15 210 30 210 60 195 105 105 120 90
+Polygon -16777216 false false 120 75 45 105 15 150 15 210 30 210 60 195 105 105 120 90
+Polygon -16777216 true false 135 300 165 300 180 285 120 285
 
 sheep
 false
@@ -408,14 +742,38 @@ Polygon -16777216 true false 253 133 245 131 245 133
 Polygon -7500403 true true 2 194 13 197 30 191 38 193 38 205 20 226 20 257 27 265 38 266 40 260 31 253 31 230 60 206 68 198 75 209 66 228 65 243 82 261 84 268 100 267 103 261 77 239 79 231 100 207 98 196 119 201 143 202 160 195 166 210 172 213 173 238 167 251 160 248 154 265 169 264 178 247 186 240 198 260 200 271 217 271 219 262 207 258 195 230 192 198 210 184 227 164 242 144 259 145 284 151 277 141 293 140 299 134 297 127 273 119 270 105
 Polygon -7500403 true true -1 195 14 180 36 166 40 153 53 140 82 131 134 133 159 126 188 115 227 108 236 102 238 98 268 86 269 92 281 87 269 103 269 113
 
+worker
+true
+0
+Polygon -1184463 true false 152 149 77 163 67 195 67 211 74 234 85 252 100 264 116 276 134 286 151 300 167 285 182 278 206 260 220 242 226 218 226 195 222 166
+Polygon -16777216 true false 150 149 128 151 114 151 98 145 80 122 80 103 81 83 95 67 117 58 141 54 151 53 177 55 195 66 207 82 211 94 211 116 204 139 189 149 171 152
+Polygon -7500403 true true 151 54 119 59 96 60 81 50 78 39 87 25 103 18 115 23 121 13 150 1 180 14 189 23 197 17 210 19 222 30 222 44 212 57 192 58
+Polygon -16777216 true false 70 185 74 171 223 172 224 186
+Polygon -16777216 true false 67 211 71 226 224 226 225 211 67 211
+Polygon -16777216 true false 91 257 106 269 195 269 211 255
+Line -1 false 144 100 70 87
+Line -1 false 70 87 45 87
+Line -1 false 45 86 26 97
+Line -1 false 26 96 22 115
+Line -1 false 22 115 25 130
+Line -1 false 26 131 37 141
+Line -1 false 37 141 55 144
+Line -1 false 55 143 143 101
+Line -1 false 141 100 227 138
+Line -1 false 227 138 241 137
+Line -1 false 241 137 249 129
+Line -1 false 249 129 254 110
+Line -1 false 253 108 248 97
+Line -1 false 249 95 235 82
+Line -1 false 235 82 144 100
+
 x
 false
 0
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
-
 @#$#@#$#@
-NetLogo 5.3.1
+NetLogo 6.0.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -431,7 +789,6 @@ true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
-
 @#$#@#$#@
 0
 @#$#@#$#@
