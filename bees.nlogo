@@ -27,7 +27,7 @@ end
 to setup-queen
   create-queens 1
   ask queens
-  [set color orange
+  [set color grey
     set age 0
     set pregnant false
     set poisoned false
@@ -41,7 +41,7 @@ end
 to setup-worker
   create-workers number-of-workers
   ask workers
-  [set color orange
+  [set color grey
     set age 0
     set size 0.8
     set poisoned false
@@ -64,11 +64,22 @@ end
 
 to go
   ;;queen stuff
+  queen-action
   ;;baby stuff
   ;;worker stuff
   ;;aging stuff
   ;;killing stuff
   tick
+end
+
+to queen-action
+  ask queens[
+    if pregnant = false and ticks mod queen-birthing-ticks = 0 [set pregnant true set color pink]
+    ;;Need to wrap below in poison check
+    ifelse pregnant = true and not any? larvae-on patch-here and [pcolor] of patch-here = yellow
+    [hatch-larvae 1 [set age 0 set energy max-energy-larvae set poisoned false set shape "larvae" set color white]]
+    [] ;;Move towards nearest patch
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -300,8 +311,8 @@ SLIDER
 539
 191
 572
-queen-birthing-chance
-queen-birthing-chance
+queen-birthing-ticks
+queen-birthing-ticks
 0
 100
 20.0
@@ -386,6 +397,21 @@ NIL
 NIL
 NIL
 1
+
+SLIDER
+22
+751
+235
+784
+larvae-queen-birthing-chance
+larvae-queen-birthing-chance
+0
+100
+20.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
