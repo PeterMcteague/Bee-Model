@@ -2,7 +2,7 @@ breed [queens queen]
 breed [larvae larva]
 breed [workers worker]
 
-queens-own [age energy poisoned pregnant]
+queens-own [age energy poisoned pregnant destination]
 larvae-own [age energy poisoned]
 workers-own [age energy poisoned current-action]
 
@@ -35,6 +35,7 @@ to setup-queen
     setxy hive-size / 2 hive-size / 2
     set shape "queen"
     set size 1.1
+    set destination "unknown"
   ]
 end
 
@@ -75,18 +76,40 @@ end
 to queen-action
   ask queens[
     if pregnant = false and ticks mod queen-birthing-ticks = 0 [set pregnant true set color pink]
-    ;;Need to wrap below in poison check
-    ifelse pregnant = true and not any? larvae-on patch-here and [pcolor] of patch-here = yellow
-    [hatch-larvae 1 [set age 0 set energy max-energy-larvae set poisoned false set shape "larvae" set color white]]
-    [] ;;Move towards nearest patch
-  ]
+
+    if poison-check = true[
+      ifelse pregnant = true and not any? larvae-on patch-here and [pcolor] of patch-here = yellow
+      ;;If pregnant and on free spacer plant larvae
+      [hatch-larvae 1 [set age 0 set energy max-energy-larvae set poisoned false set shape "larvae" set color white]
+        set pregnant false
+        set color grey
+        set energy (energy - 1) ;apparently the queen uses energy giving birth http://articles.extension.org/pages/73133/honey-bee-queens:-evaluating-the-most-important-colony-member (Queen function in a colony)
+        set destination "unknown"]
+      ;;Otherwise move towards closest free space
+      [ifelse destination = "unknown"[
+        let free-patches patches with [pcolor = yellow and not any? larvae-here]
+          if any? free-patches
+          [let central-patches (free-patches with-min [distance patch (hive-size / 2) (hive-size / 2)])
+            let destination-patch (min-one-of central-patches [distance myself])
+            face destination-patch
+            set destination destination-patch
+            fd 1]]
+      [ifelse patch-here = destination[][
+        face destination
+        move-to patch-ahead 1]]]]
+
+    set energy (energy - 1)]
+end
+
+to-report poison-check
+  report random 100 < poison-strength-%
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 250
 10
-723
-484
+727
+508
 -1
 -1
 17.962
@@ -118,7 +141,7 @@ hive-size
 hive-size
 0
 500
-25.0
+25
 1
 1
 patches
@@ -150,7 +173,7 @@ number-of-workers
 number-of-workers
 0
 500
-50.0
+50
 1
 1
 NIL
@@ -165,7 +188,7 @@ max-energy-worker
 max-energy-worker
 0
 100
-10.0
+10
 1
 1
 NIL
@@ -180,7 +203,7 @@ max-energy-queen
 max-energy-queen
 0
 100
-10.0
+10
 1
 1
 NIL
@@ -195,7 +218,7 @@ max-energy-larvae
 max-energy-larvae
 0
 100
-10.0
+10
 1
 1
 NIL
@@ -210,7 +233,7 @@ number-of-food-sources
 number-of-food-sources
 0
 4
-4.0
+4
 1
 1
 NIL
@@ -225,7 +248,7 @@ poison-strength-%
 poison-strength-%
 0
 100
-50.0
+50
 1
 1
 NIL
@@ -240,7 +263,7 @@ number-of-food-sources-poisoned
 number-of-food-sources-poisoned
 0
 4
-3.0
+3
 1
 1
 NIL
@@ -255,7 +278,7 @@ food-poison-cycle-ticks
 food-poison-cycle-ticks
 0
 1000
-50.0
+50
 1
 1
 NIL
@@ -270,7 +293,7 @@ food-poison-cycles
 food-poison-cycles
 0
 20
-20.0
+20
 1
 1
 NIL
@@ -285,7 +308,7 @@ food-poison-cycle-gap-ticks
 food-poison-cycle-gap-ticks
 0
 100
-50.0
+50
 1
 1
 NIL
@@ -294,16 +317,16 @@ HORIZONTAL
 SLIDER
 16
 501
-188
-534
+206
+535
 larvae-ticks-to-birth
 larvae-ticks-to-birth
 0
 100
-5.0
+3
 1
 1
-NIL
+days
 HORIZONTAL
 
 SLIDER
@@ -315,7 +338,7 @@ queen-birthing-ticks
 queen-birthing-ticks
 0
 100
-20.0
+20
 1
 1
 NIL
@@ -330,7 +353,7 @@ honey-energy-gain
 honey-energy-gain
 0
 100
-8.0
+8
 1
 1
 NIL
@@ -345,7 +368,7 @@ max-age-worker
 max-age-worker
 0
 100
-50.0
+50
 1
 1
 NIL
@@ -360,7 +383,7 @@ max-age-queen
 max-age-queen
 0
 100
-50.0
+50
 1
 1
 NIL
@@ -375,7 +398,7 @@ how-often-to-birth-larvae
 how-often-to-birth-larvae
 0
 100
-30.0
+30
 1
 1
 NIL
@@ -407,7 +430,7 @@ larvae-queen-birthing-chance
 larvae-queen-birthing-chance
 0
 100
-20.0
+20
 1
 1
 NIL
@@ -798,8 +821,9 @@ false
 0
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
+
 @#$#@#$#@
-NetLogo 6.0.1
+NetLogo 5.3.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -815,6 +839,7 @@ true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
+
 @#$#@#$#@
 0
 @#$#@#$#@
