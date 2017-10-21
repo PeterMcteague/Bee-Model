@@ -4,7 +4,7 @@ breed [workers worker]
 
 queens-own [age energy poisoned pregnant destination]
 larvae-own [age energy poisoned]
-workers-own [age energy poisoned current-action]
+workers-own [age energy poisoned current-action destination]
 
 to setup
   clear-all                           ;; clear the screen
@@ -67,6 +67,7 @@ to go
   ;;queen stuff
   queen-action
   ;;baby stuff
+  larvae-action
   ;;worker stuff
   ;;aging stuff
   ;;killing stuff
@@ -106,8 +107,25 @@ to queen-action
     set energy (energy - 1)]
 end
 
+to larvae-action
+  ask larvae[
+    if age >= larvae-ticks-to-birth
+    [ifelse count queens = 0 and queen-roll = true
+      [hatch-queens 1 [set age 0 set energy max-energy-worker set poisoned false set pregnant false set destination "" set color grey set shape "queen"]
+        die
+      ]
+      [hatch-workers 1 [set age 0 set energy max-energy-worker set poisoned false set current-action "" set destination "" set color grey set shape "worker"]
+        die
+      ]]
+    set energy (energy - 1)]
+end
+
+to-report queen-roll
+  report random 100 < larvae-queen-birthing-chance
+end
+
 to-report poison-check
-  report random 100 < poison-strength-%
+  report random 100 > poison-strength-%
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
