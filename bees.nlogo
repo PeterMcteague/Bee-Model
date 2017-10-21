@@ -121,6 +121,24 @@ end
 to worker-action
   ask workers
   [
+    ifelse current-action != ""
+    [
+      if current-action = "feeding-queen"
+      []
+      if current-action = "gathering-food"
+      []
+      if current-action = "gathering-honey"
+      []
+      if current-action = "feeding-queen"
+      []
+      if current-action = "feeding larvae"
+      []
+      if current-action = "feeding-self"
+      []
+      if current-action = "cleaning"
+      []
+      ]
+    [
     ;;feed queen
     ifelse count queens = 1 and (any? queens with [energy < max-energy-queen])
     [
@@ -145,7 +163,7 @@ to worker-action
           ]
 
         ]
-    ]
+    ]]
    set energy (energy - 1)]
 end
 
