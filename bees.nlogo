@@ -64,13 +64,11 @@ end
 ;;Main
 
 to go
-  ;;queen stuff
   queen-action
-  ;;baby stuff
   larvae-action
   ;;worker stuff
-  ;;aging stuff
-  ;;killing stuff
+  age-all
+  death-check
   tick
 end
 
@@ -118,6 +116,23 @@ to larvae-action
         die
       ]]
     set energy (energy - 1)]
+end
+
+to age-all
+  ask turtles[set age (age + 1)]
+end
+
+to death-check
+  ask queens
+  [
+    if age > max-age-queen[die]
+  ]
+  ask workers
+  [
+    if age > max-age-worker[die]
+  ]
+  ask turtles
+  [if energy = 0[die]]
 end
 
 to-report queen-roll
