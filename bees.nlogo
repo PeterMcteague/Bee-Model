@@ -122,9 +122,30 @@ to worker-action
   ask workers
   [
     ;;feed queen
-    ;;else feed self
-    ;;else feed larvae
-    ;;else clean
+    ifelse count queens = 1 and (any? queens with [energy < max-energy-queen])
+    [
+
+      ]
+    [
+      ;;else feed self
+      ifelse energy < max-energy-worker
+      [
+
+        ]
+      [
+        ;;else feed larvae
+        ifelse any? larvae with [energy < max-energy-larvae]
+        [
+
+          ]
+        [
+          ;;else clean
+          if any? patches with [pcolor = "grey"]
+          []
+          ]
+
+        ]
+    ]
    set energy (energy - 1)]
 end
 
