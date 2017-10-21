@@ -73,6 +73,15 @@ to go
   tick
 end
 
+to queen-birth
+  move-to patch-here ;;stops the larvae being off center.
+  hatch-larvae 1 [set age 0 set energy max-energy-larvae set poisoned false set shape "larvae" set color white]
+  set pregnant false
+  set color grey
+  set energy (energy - 1) ;apparently the queen uses energy giving birth http://articles.extension.org/pages/73133/honey-bee-queens:-evaluating-the-most-important-colony-member (Queen function in a colony)
+  set destination "unknown"
+end
+
 to queen-action
   ask queens[
     if pregnant = false and ticks mod queen-birthing-ticks = 0 [set pregnant true set color pink]
@@ -80,11 +89,7 @@ to queen-action
     if poison-check = true[
       ifelse pregnant = true and not any? larvae-on patch-here and [pcolor] of patch-here = yellow
       ;;If pregnant and on free spacer plant larvae
-      [hatch-larvae 1 [set age 0 set energy max-energy-larvae set poisoned false set shape "larvae" set color white]
-        set pregnant false
-        set color grey
-        set energy (energy - 1) ;apparently the queen uses energy giving birth http://articles.extension.org/pages/73133/honey-bee-queens:-evaluating-the-most-important-colony-member (Queen function in a colony)
-        set destination "unknown"]
+      [queen-birth]
       ;;Otherwise move towards closest free space
       [ifelse destination = "unknown"[
         let free-patches patches with [pcolor = yellow and not any? larvae-here]
@@ -318,7 +323,7 @@ SLIDER
 16
 501
 206
-535
+534
 larvae-ticks-to-birth
 larvae-ticks-to-birth
 0
