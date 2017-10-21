@@ -66,7 +66,7 @@ end
 to go
   queen-action
   larvae-action
-  ;;worker stuff
+  worker-action
   age-all
   death-check
   tick
@@ -116,6 +116,16 @@ to larvae-action
         die
       ]]
     set energy (energy - 1)]
+end
+
+to worker-action
+  ask workers
+  [
+    ;;feed queen
+    ;;else feed self
+    ;;else feed larvae
+    ;;else clean
+   set energy (energy - 1)]
 end
 
 to age-all
