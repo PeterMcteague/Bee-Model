@@ -124,41 +124,44 @@ to worker-action
   [
     ifelse current-action != ""
     [
-      if current-action = "feeding-queen" and any? queens
+      if poison-check
       [
-        ifelse any? queens-on patch-here
-        [let queen queens-on patch-here
-          set queen energy = energy + honey-energy-gain
-          if carrying = "poisoned-honey"[set queen poisoned = true]
-          set current-action ""
-          ]
-        [face one-of queens
-          set destination (one-of queens)
-          fd 1]
-        ]
-      if current-action = "gathering-food"
-      [
-        ifelse [pcolor] of patch-here = green
-        [set carrying "poisoned-food"
-         set current-action ""]
+        if current-action = "feeding-queen" and any? queens
         [
-        ifelse [pcolor] of patch-here = blue
-        [set carrying "food"
-         set current-action ""]
-        [face destination
-          fd 1]
-        ]]
-      if current-action = "storing-food"
-      []
-      if current-action = "gathering-honey"
-      []
-      if current-action = "feeding-larvae"
-      []
-      if current-action = "feeding-self"
-      []
-      if current-action = "cleaning"
-      []
+          ifelse any? queens-on patch-here
+          [let queen queens-on patch-here
+            set queen energy = energy + honey-energy-gain
+            if carrying = "poisoned-honey"[set queen poisoned = true]
+            set current-action ""
+          ]
+          [face one-of queens
+            set destination (one-of queens)
+            fd 1]
+        ]
+        if current-action = "gathering-food"
+        [
+          ifelse [pcolor] of patch-here = green
+          [set carrying "poisoned-food"
+            set current-action ""]
+          [
+            ifelse [pcolor] of patch-here = blue
+            [set carrying "food"
+              set current-action ""]
+            [face destination
+              fd 1]
+          ]]
+        if current-action = "storing-food"
+        []
+        if current-action = "gathering-honey"
+        []
+        if current-action = "feeding-larvae"
+        []
+        if current-action = "feeding-self"
+        []
+        if current-action = "cleaning"
+        []
       ]
+    ]
     [
     ;;feed queen
     ifelse count queens = 1 and (any? queens with [energy < max-energy-queen])
@@ -182,11 +185,12 @@ to worker-action
           [set current-action "gathering-honey"]
           ]
         [
+          ;else gather
           ifelse not any? patches with [pcolor] = "orange"
           [set current-action "gathering-food"]
           ;;else clean
           [if any? patches with [pcolor = "grey"]
-          [set current-action "cleaning"]]
+            [set current-action "cleaning"]]
           ]
 
         ]
