@@ -72,6 +72,7 @@ to go
   worker-action
   age-all
   death-check
+  limit-energy
   tick
 end
 
@@ -86,24 +87,23 @@ end
 
 to queen-action
   ask queens[
+    let free-patches patches with [pcolor = yellow and not any? larvae-here]
+
     if pregnant = false and ticks mod queen-birthing-ticks = 0 [set pregnant true set color pink]
 
     if poison-check = true[
-      ifelse pregnant = true and not any? larvae-on patch-here and [pcolor] of patch-here = yellow
-      ;;If pregnant and on free spacer plant larvae
-      [queen-birth]
-      ;;Otherwise move towards closest free space
-      [ifelse destination = "unknown"[
-        let free-patches patches with [pcolor = yellow and not any? larvae-here]
-          if any? free-patches
-          [let central-patches (free-patches with-min [distance patch (hive-size / 2) (hive-size / 2)])
-            let destination-patch (min-one-of central-patches [distance myself])
-            face destination-patch
-            set destination destination-patch
-            fd 1]]
-      [ifelse patch-here = destination[][
-        face destination
-        move-to patch-ahead 1]]]]
+      ;;if no free spaces don't attempt anything
+      ifelse not any? free-patches
+      [set destination ""]
+      ;;Otherwise set destination to closest patch to middle of hive and to queen
+      [set destination (min-one-of (free-patches with-min [distance patch (hive-size / 2) (hive-size / 2)]) [distance myself])]
+
+      if destination != ""
+      [ifelse patch-here = destination
+        [queen-birth]
+        [face destination
+          fd 1]
+       ]]
 
     set energy (energy - 1)]
 end
@@ -112,7 +112,7 @@ to larvae-action
   ask larvae[
     if age >= larvae-ticks-to-birth
     [ifelse count queens = 0 and queen-roll = true
-      [hatch-queens 1 [set age 0 set energy max-energy-worker set poisoned poisoned set pregnant false set destination "" set color gray set shape "queen" set size 1.1]
+      [hatch-queens 1 [set age 0 set energy max-energy-queen set poisoned poisoned set pregnant false set destination "" set color gray set shape "queen" set size 1.1]
         die
       ]
       [hatch-workers 1 [set age 0 set energy max-energy-worker set poisoned poisoned set current-action "" set destination "" set color gray set shape "worker" set size 0.8]
@@ -158,7 +158,7 @@ to worker-action
 
         if current-action = "gathering-honey"
         [
-          ifelse not any-honey? or carrying != ""
+          ifelse not any-honey? and carrying = ""
           [set current-action ""]
           [
             if destination = ""
@@ -180,14 +180,82 @@ to worker-action
         ]
 
         ;;gathering food
+        if current-action = "gathering-food"
+        [
+          if destination = ""
+          [set destination (min-one-of (patches with [pcolor = green or pcolor = blue]) [distance myself])]
+
+          ifelse patch-here = destination
+          [
+            if [pcolor] of patch-here = green
+            [set carrying "poisoned-food"]
+            if [pcolor] of patch-here = blue
+            [set carrying "food"]
+
+            set current-action "storing-food"
+            set destination ""
+          ]
+          [
+            face destination
+            fd 1]
+          ]
+
+        ;;storing food
+        if current-action = "storing-food"
+        [
+          ifelse not any? patches with [pcolor = yellow and not any? larvae-here]
+          [set destination "" set current-action ""]
+          [if destination = "" or [pcolor] of destination != yellow
+          [set destination (min-one-of (patches with [pcolor = yellow and not any? larvae-here]) [distance myself])]
+
+          ifelse patch-here = destination
+          [
+            if carrying = "food"
+            [set pcolor orange]
+
+            if carrying = "poisoned-food"
+            [set pcolor red]
+
+            set destination ""
+            set carrying ""
+            set current-action ""]
+          [face destination
+           fd 1]]
+          ]
 
         ;;feeding self
+        if current-action = "feeding-self"
+        [
+          ifelse carrying = ""
+          [set current-action "gathering-honey"]
+          [ifelse carrying = "poisoned-honey"
+            [set energy (energy + honey-energy-gain) set poisoned true set carrying "" set destination "" set current-action ""]
+            [set energy (energy + honey-energy-gain) set carrying "" set destination "" set current-action ""]]
+        ]
 
         ;;feeding larvae
+        if current-action = "feeding-larvae"
+        [
+          ifelse not any? larvae
+          [set current-action ""]
+          [
+          if destination = "" or not any? larvae-on destination
+          [set destination ([patch-here] of one-of larvae with-min [energy])]
+
+          ifelse destination = patch-here
+          [if carrying = "poisoned-honey"
+            [ask larvae-here [set poisoned true]]
+
+            ask larvae-here [set energy (energy + honey-energy-gain)]]
+          [face destination
+            fd 1]]]
 
         ;;cleaning
         if current-action = "cleaning"
         [
+          ifelse not any? patches with [pcolor = gray]
+          [set current-action ""]
+          [
           if destination = "" or [pcolor] of destination != gray
           [set destination (min-one-of (patches with [pcolor = gray]) [distance myself])]
 
@@ -196,7 +264,7 @@ to worker-action
             set current-action ""
             set destination ""]
           [face destination
-            fd 1]]
+            fd 1]]]
       ]
     ]
 
@@ -204,24 +272,28 @@ to worker-action
     [
       set destination ""
 
-      if not any-honey?
-      [set current-action "gathering-food"]
-
       ;;feed queen if there's food and if she's hungry
-      if any? queens with [energy < max-energy-queen] and any-honey?
+      if any? queens with [energy < (max-energy-queen * worker-feed-queen-threshold-%)] and any-honey?
       [set current-action "feeding-queen"]
 
-      if energy < max-energy-worker
+      if energy < (max-energy-worker * worker-feed-self-threshold-%) and any-honey?
       [set current-action "feeding-self"]
 
-      if any? larvae with [energy < max-energy-larvae] and any-honey?
+      if any? larvae and any? larvae with [energy < (max-energy-larvae * worker-feed-larvae-threshold-%)] and any-honey? and any? larvae with [energy < larvae-ticks-to-birth - age]
       [set current-action "feeding-larvae"]
 
-      if any? patches with [pcolor = gray]
+      ifelse not any? patches with [pcolor = gray]
+      [set current-action "gathering-food"]
       [set current-action "cleaning"]
     ]
 
    set energy (energy - 1)]
+end
+
+to limit-energy
+  ask queens[if energy > max-energy-queen[set energy max-energy-queen]]
+  ask larvae[if energy > max-energy-larvae[set energy max-energy-larvae]]
+  ask workers[if energy > max-energy-worker[set energy max-energy-worker]]
 end
 
 to age-all
@@ -249,7 +321,7 @@ to-report any-honey?
 end
 
 to-report queen-roll
-  report random 100 < larvae-queen-birthing-chance
+  report random 100 <= larvae-queen-birthing-chance
 end
 
 to-report poison-check
@@ -324,7 +396,7 @@ number-of-workers
 number-of-workers
 0
 500
-50
+102
 1
 1
 NIL
@@ -339,7 +411,7 @@ max-energy-worker
 max-energy-worker
 0
 100
-20
+100
 1
 1
 NIL
@@ -354,7 +426,7 @@ max-energy-queen
 max-energy-queen
 0
 100
-35
+100
 1
 1
 NIL
@@ -369,7 +441,7 @@ max-energy-larvae
 max-energy-larvae
 0
 100
-10
+15
 1
 1
 NIL
@@ -414,7 +486,7 @@ number-of-food-sources-poisoned
 number-of-food-sources-poisoned
 0
 4
-3
+0
 1
 1
 NIL
@@ -474,7 +546,7 @@ larvae-ticks-to-birth
 larvae-ticks-to-birth
 0
 100
-3
+10
 1
 1
 ticks
@@ -489,7 +561,7 @@ queen-birthing-ticks
 queen-birthing-ticks
 0
 100
-20
+10
 1
 1
 NIL
@@ -519,7 +591,7 @@ max-age-worker
 max-age-worker
 0
 100
-50
+100
 1
 1
 NIL
@@ -534,7 +606,7 @@ max-age-queen
 max-age-queen
 0
 100
-50
+100
 1
 1
 NIL
@@ -575,13 +647,13 @@ NIL
 SLIDER
 22
 751
-235
-784
+241
+785
 larvae-queen-birthing-chance
 larvae-queen-birthing-chance
 0
 100
-20
+100
 1
 1
 NIL
@@ -593,7 +665,7 @@ MONITOR
 952
 154
 Queen energy
-[energy] of one-of queens
+sum [energy] of queens
 1
 1
 11
@@ -615,9 +687,10 @@ true
 "" ""
 PENS
 "workers" 1.0 0 -1184463 true "" "plot count workers with [poisoned = false]"
-"larvae" 1.0 0 -1513240 true "" "plot count larvae with [poisoned = false]"
+"larvae" 1.0 0 -14454117 true "" "plot count larvae with [poisoned = false]"
 "poisoned workers" 1.0 0 -13840069 true "" "plot count workers with [poisoned = true]"
 "poisoned-larvae" 1.0 0 -7500403 true "" "plot count larvae with [poisoned = true]"
+"queens" 1.0 0 -2674135 true "" "plot count queens"
 
 PLOT
 839
@@ -662,7 +735,7 @@ PENS
 "Cleaning" 1.0 0 -955883 true "" "plot count workers with [current-action = \"cleaning\"]"
 "Feeding self" 1.0 0 -6459832 true "" "plot count workers with [current-action = \"feeding-self\"]"
 "Idle" 1.0 0 -1184463 true "" "plot count workers with [current-action = \"\"]"
-"Gathering honey" 1.0 0 -10899396 true "" "plot count workers with [current-action = \"gathering-honey\"]"
+"Gathering honey" 1.0 0 -13345367 true "" "plot count workers with [current-action = \"gathering-honey\"]"
 "Feeding larvae" 1.0 0 -13840069 true "" "plot count workers with [current-action = \"feeding-larvae\"]"
 
 MONITOR
@@ -675,6 +748,62 @@ sum [energy] of workers
 17
 1
 11
+
+MONITOR
+838
+50
+1153
+95
+NIL
+count larvae
+1
+1
+11
+
+SLIDER
+22
+798
+242
+832
+worker-feed-self-threshold-%
+worker-feed-self-threshold-%
+0
+1
+0.3
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+500
+800
+736
+834
+worker-feed-larvae-threshold-%
+worker-feed-larvae-threshold-%
+0
+1
+0.5
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+256
+800
+492
+834
+worker-feed-queen-threshold-%
+worker-feed-queen-threshold-%
+0
+1
+0.6
+0.01
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
