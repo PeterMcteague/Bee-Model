@@ -275,18 +275,18 @@ to worker-action
       set destination ""
 
       ;;feed queen if there's food and if she's hungry
-      if any? queens with [energy < (max-energy-queen * worker-feed-queen-threshold-%)] and any-honey?
+      ifelse any? queens with [energy < (max-energy-queen * worker-feed-queen-threshold-%)] and any-honey?
       [set current-action "feeding-queen"]
-
-      if energy < (max-energy-worker * worker-feed-self-threshold-%) and any-honey?
+      [
+      ifelse energy < (max-energy-worker * worker-feed-self-threshold-%) and any-honey?
       [set current-action "feeding-self"]
 
-      if any? larvae and any? larvae with [energy < (max-energy-larvae * worker-feed-larvae-threshold-%)] and any-honey? and any? larvae with [energy < larvae-ticks-to-birth - age]
+      [ifelse any? larvae and any? larvae with [energy < (max-energy-larvae * worker-feed-larvae-threshold-%)] and any-honey? and any? larvae with [energy < larvae-ticks-to-birth - age]
       [set current-action "feeding-larvae"]
 
-      ifelse not any? patches with [pcolor = gray]
+      [ifelse not any? patches with [pcolor = gray]
       [set current-action "gathering-food"]
-      [set current-action "cleaning"]
+      [set current-action "cleaning"]]]]
     ]
 
    set energy (energy - 1)]
@@ -333,8 +333,8 @@ end
 GRAPHICS-WINDOW
 250
 10
-727
-508
+709
+490
 -1
 -1
 17.962
@@ -348,9 +348,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-25
+24
 0
-25
+24
 0
 0
 1
@@ -366,7 +366,7 @@ hive-size
 hive-size
 0
 500
-25
+24
 1
 1
 patches
@@ -413,7 +413,7 @@ max-energy-worker
 max-energy-worker
 0
 100
-30
+40
 1
 1
 NIL
@@ -428,7 +428,7 @@ max-energy-queen
 max-energy-queen
 0
 100
-40
+60
 1
 1
 NIL
@@ -548,7 +548,7 @@ larvae-ticks-to-birth
 larvae-ticks-to-birth
 0
 100
-10
+6
 1
 1
 ticks
@@ -771,7 +771,7 @@ worker-feed-self-threshold-%
 worker-feed-self-threshold-%
 0
 1
-0.3
+0.45
 0.01
 1
 NIL
@@ -801,7 +801,7 @@ worker-feed-queen-threshold-%
 worker-feed-queen-threshold-%
 0
 1
-0.6
+0.45
 0.01
 1
 NIL
