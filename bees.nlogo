@@ -167,10 +167,12 @@ to worker-action
             ifelse patch-here = destination
             [
               if [pcolor] of patch-here = orange
-              [set carrying "honey"]
+              [set carrying "honey"
+                set pcolor yellow]
 
               if [pcolor] of patch-here = red
-              [set carrying "poisoned-honey"]
+              [set carrying "poisoned-honey"
+                set pcolor yellow]
 
               set destination ""
               set current-action ""
@@ -396,7 +398,7 @@ number-of-workers
 number-of-workers
 0
 500
-102
+100
 1
 1
 NIL
@@ -411,7 +413,7 @@ max-energy-worker
 max-energy-worker
 0
 100
-100
+30
 1
 1
 NIL
@@ -426,7 +428,7 @@ max-energy-queen
 max-energy-queen
 0
 100
-100
+40
 1
 1
 NIL
@@ -441,7 +443,7 @@ max-energy-larvae
 max-energy-larvae
 0
 100
-15
+10
 1
 1
 NIL
@@ -470,7 +472,7 @@ SLIDER
 poison-strength-%
 poison-strength-%
 0
-100
+99
 50
 1
 1
@@ -648,7 +650,7 @@ SLIDER
 22
 751
 241
-785
+784
 larvae-queen-birthing-chance
 larvae-queen-birthing-chance
 0
@@ -764,7 +766,7 @@ SLIDER
 22
 798
 242
-832
+831
 worker-feed-self-threshold-%
 worker-feed-self-threshold-%
 0
@@ -779,7 +781,7 @@ SLIDER
 500
 800
 736
-834
+833
 worker-feed-larvae-threshold-%
 worker-feed-larvae-threshold-%
 0
@@ -794,7 +796,7 @@ SLIDER
 256
 800
 492
-834
+833
 worker-feed-queen-threshold-%
 worker-feed-queen-threshold-%
 0
