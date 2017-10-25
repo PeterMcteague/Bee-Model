@@ -331,10 +331,10 @@ to-report poison-check
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-250
-10
-637
-418
+846
+26
+1887
+1109
 -1
 -1
 17.962
@@ -348,9 +348,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-20
+56
 0
-20
+56
 0
 0
 1
@@ -366,17 +366,17 @@ hive-size
 hive-size
 0
 500
-20
+56
 1
 1
 patches
 HORIZONTAL
 
 BUTTON
-747
-10
-810
-43
+748
+13
+811
+46
 NIL
 setup
 NIL
@@ -397,9 +397,9 @@ SLIDER
 number-of-workers
 number-of-workers
 0
-500
-200
-5
+10000
+1500
+100
 1
 NIL
 HORIZONTAL
@@ -496,9 +496,9 @@ HORIZONTAL
 
 SLIDER
 16
-501
+374
 206
-534
+407
 larvae-ticks-to-birth
 larvae-ticks-to-birth
 0
@@ -510,10 +510,10 @@ ticks
 HORIZONTAL
 
 SLIDER
-17
-539
-191
-572
+16
+418
+190
+451
 queen-birthing-ticks
 queen-birthing-ticks
 0
@@ -525,10 +525,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-19
-581
-191
-614
+18
+459
+190
+492
 honey-energy-gain
 honey-energy-gain
 0
@@ -540,10 +540,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-19
-623
-191
-656
+18
+502
+190
+535
 max-age-worker
 max-age-worker
 0
@@ -555,10 +555,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-19
-664
-191
-697
+18
+543
+190
+576
 max-age-queen
 max-age-queen
 0
@@ -570,10 +570,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-23
-709
-216
-742
+22
+588
+215
+621
 how-often-to-birth-larvae
 how-often-to-birth-larvae
 0
@@ -585,10 +585,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-749
-56
-812
-89
+675
+13
+738
+46
 NIL
 go
 T
@@ -602,10 +602,10 @@ NIL
 1
 
 SLIDER
-22
-751
-241
-784
+20
+629
+239
+662
 larvae-queen-birthing-chance
 larvae-queen-birthing-chance
 0
@@ -617,10 +617,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-841
-109
-952
-154
+297
+67
+408
+112
 Queen energy
 sum [energy] of queens
 1
@@ -628,10 +628,10 @@ sum [energy] of queens
 11
 
 PLOT
-840
-166
-1225
-316
+297
+124
+682
+274
 number-of-bees
 NIL
 NIL
@@ -650,10 +650,10 @@ PENS
 "queens" 1.0 0 -2674135 true "" "plot count queens"
 
 PLOT
-839
-333
-1224
-483
+298
+287
+683
+437
 patch status
 NIL
 NIL
@@ -671,10 +671,10 @@ PENS
 "Poisoned honey" 1.0 0 -2674135 true "" "plot count patches with [pcolor = red]"
 
 PLOT
-839
-498
-1225
-684
+297
+453
+683
+639
 Worker actions
 NIL
 NIL
@@ -696,10 +696,10 @@ PENS
 "Feeding larvae" 1.0 0 -13840069 true "" "plot count workers with [current-action = \"feeding-larvae\"]"
 
 MONITOR
-967
-109
-1125
-154
+415
+67
+573
+112
 NIL
 sum [energy] of workers
 17
@@ -707,10 +707,10 @@ sum [energy] of workers
 11
 
 MONITOR
-838
-50
-1153
-95
+295
+13
+610
+58
 NIL
 count larvae
 1
@@ -718,10 +718,10 @@ count larvae
 11
 
 SLIDER
-22
-798
-242
-831
+20
+677
+240
+710
 worker-feed-self-threshold-%
 worker-feed-self-threshold-%
 0
@@ -733,10 +733,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-500
-800
-736
-833
+12
+773
+248
+806
 worker-feed-larvae-threshold-%
 worker-feed-larvae-threshold-%
 0
@@ -748,10 +748,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-256
-800
-492
-833
+4
+727
+240
+760
 worker-feed-queen-threshold-%
 worker-feed-queen-threshold-%
 0
@@ -761,6 +761,17 @@ worker-feed-queen-threshold-%
 1
 NIL
 HORIZONTAL
+
+MONITOR
+583
+67
+676
+112
+NIL
+count workers
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
