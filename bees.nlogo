@@ -255,7 +255,7 @@ to worker-action
         ;;cleaning
         if current-action = "cleaning"
         [
-          ifelse any? patches with [pcolor] = "gray"
+          ifelse any? patches with [pcolor = gray]
           [if destination = ""
             [set destination (min-one-of (patches with [pcolor = gray]) [distance myself])]
             if [pcolor] of destination != gray
@@ -329,12 +329,62 @@ end
 to-report poison-check
   report random 100 > poison-strength-%
 end
+
+;;Functions for plotting
+
+to-report workers-feeding-queen
+  ifelse any? workers
+  [report (count workers with [current-action = "feeding-queen"]) / count workers]
+  [report 0]
+end
+
+to-report workers-gathering-food
+  ifelse any? workers
+  [report (count workers with [current-action = "gathering-food"]) / count workers]
+  [report 0]
+end
+
+to-report workers-storing-food
+  ifelse any? workers
+  [report (count workers with [current-action = "storing-food"]) / count workers]
+  [report 0]
+end
+
+to-report workers-cleaning
+  ifelse any? workers
+  [report (count workers with [current-action = "cleaning"]) / count workers]
+  [report 0]
+end
+
+to-report workers-feeding-selves
+  ifelse any? workers
+  [report (count workers with [current-action = "feeding-self"]) / count workers]
+  [report 0]
+end
+
+to-report workers-idle
+  ifelse any? workers
+  [report (count workers with [current-action = ""]) / count workers]
+  [report 0]
+end
+
+to-report workers-gathering-honey
+  ifelse any? workers
+  [report (count workers with [current-action = "gathering-honey"]) / count workers]
+  [report 0]
+end
+
+to-report workers-feeding-larvae
+  ifelse any? workers
+  [report (count workers with [current-action = "feeding-larvae"]) / count workers]
+  [report 0]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 846
 26
-1232
-414
+1233
+434
 -1
 -1
 17.962
@@ -366,7 +416,7 @@ hive-size
 hive-size
 0
 500
-20.0
+20
 1
 1
 patches
@@ -398,7 +448,7 @@ number-of-workers
 number-of-workers
 0
 10000
-1500.0
+1500
 100
 1
 NIL
@@ -413,7 +463,7 @@ max-energy-worker
 max-energy-worker
 0
 100
-70.0
+70
 1
 1
 NIL
@@ -428,7 +478,7 @@ max-energy-queen
 max-energy-queen
 0
 100
-70.0
+70
 1
 1
 NIL
@@ -443,7 +493,7 @@ max-energy-larvae
 max-energy-larvae
 0
 100
-25.0
+25
 1
 1
 NIL
@@ -458,7 +508,7 @@ number-of-food-sources
 number-of-food-sources
 0
 4
-4.0
+4
 1
 1
 NIL
@@ -473,7 +523,7 @@ poison-strength-%
 poison-strength-%
 0
 99
-50.0
+50
 1
 1
 NIL
@@ -488,7 +538,7 @@ number-of-food-sources-poisoned
 number-of-food-sources-poisoned
 0
 4
-0.0
+0
 1
 1
 NIL
@@ -503,7 +553,7 @@ larvae-ticks-to-birth
 larvae-ticks-to-birth
 0
 100
-30.0
+30
 1
 1
 ticks
@@ -518,7 +568,7 @@ queen-birthing-ticks
 queen-birthing-ticks
 0
 100
-1.0
+1
 1
 1
 NIL
@@ -533,7 +583,7 @@ honey-energy-gain
 honey-energy-gain
 0
 100
-40.0
+40
 1
 1
 NIL
@@ -548,7 +598,7 @@ max-age-worker
 max-age-worker
 0
 1000
-60.0
+60
 5
 1
 NIL
@@ -563,7 +613,7 @@ max-age-queen
 max-age-queen
 0
 10000
-1260.0
+1260
 5
 1
 NIL
@@ -578,7 +628,7 @@ how-often-to-birth-larvae
 how-often-to-birth-larvae
 0
 100
-3.0
+3
 1
 1
 NIL
@@ -610,7 +660,7 @@ larvae-queen-birthing-chance
 larvae-queen-birthing-chance
 0
 100
-100.0
+100
 1
 1
 NIL
@@ -686,14 +736,14 @@ true
 true
 "" ""
 PENS
-"Feeding queen" 1.0 0 -16777216 true "" "plot (count workers with [current-action = \"feeding-queen\"]) / count workers"
-"Gathering food" 1.0 0 -5825686 true "" "plot (count workers with [current-action = \"gathering-food\"]) / count workers"
-"Storing food" 1.0 0 -2674135 true "" "plot (count workers with [current-action = \"storing-food\"]) / count workers"
-"Cleaning" 1.0 0 -13791810 true "" "plot (count workers with [current-action = \"cleaning\"]) / count workers"
-"Feeding self" 1.0 0 -6459832 true "" "plot (count workers with [current-action = \"feeding-self\"]) / count workers"
-"Idle" 1.0 0 -1184463 true "" "plot (count workers with [current-action = \"\"]) / count workers"
-"Gathering honey" 1.0 0 -13345367 true "" "plot (count workers with [current-action = \"gathering-honey\"]) / count workers"
-"Feeding larvae" 1.0 0 -13840069 true "" "plot (count workers with [current-action = \"feeding-larvae\"]) / count workers"
+"Feeding queen" 1.0 0 -16777216 true "" "plot workers-feeding-queen"
+"Gathering food" 1.0 0 -5825686 true "" "plot workers-gathering-food"
+"Storing food" 1.0 0 -2674135 true "" "plot workers-storing-food"
+"Cleaning" 1.0 0 -13791810 true "" "plot workers-cleaning"
+"Feeding self" 1.0 0 -6459832 true "" "plot workers-feeding-selves"
+"Idle" 1.0 0 -1184463 true "" "plot workers-idle"
+"Gathering honey" 1.0 0 -13345367 true "" "plot workers-gathering-honey"
+"Feeding larvae" 1.0 0 -13840069 true "" "plot workers-feeding-larvae"
 
 MONITOR
 415
@@ -795,12 +845,12 @@ SLIDER
 19
 965
 204
-1000
+998
 larvae-birthed-per-egg
 larvae-birthed-per-egg
 0
 1000
-200.0
+200
 1
 1
 NIL
@@ -810,7 +860,7 @@ SLIDER
 19
 1022
 192
-1057
+1055
 clean-threshold-%
 clean-threshold-%
 0
@@ -1206,8 +1256,9 @@ false
 0
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
+
 @#$#@#$#@
-NetLogo 6.0.1
+NetLogo 5.3.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -1223,6 +1274,7 @@ true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
+
 @#$#@#$#@
 0
 @#$#@#$#@
