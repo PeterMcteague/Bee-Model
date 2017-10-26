@@ -43,7 +43,7 @@ to setup-worker
   create-workers number-of-workers
   ask workers
   [set color gray
-    set age 0
+    set age random max-age-worker
     set size 0.8
     set poisoned false
     set current-action ""
@@ -78,7 +78,7 @@ end
 
 to queen-birth
   move-to patch-here ;;stops the larvae being off center.
-  hatch-larvae 1 [set age 0 set energy max-energy-larvae set poisoned false set shape "larvae" set color white]
+  hatch-larvae larvae-birthed-per-egg [set age 0 set energy max-energy-larvae set poisoned false set shape "larvae" set color white]
   set pregnant false
   set color gray
   set energy (energy - 1) ;apparently the queen uses energy giving birth http://articles.extension.org/pages/73133/honey-bee-queens:-evaluating-the-most-important-colony-member (Queen function in a colony)
@@ -112,10 +112,10 @@ to larvae-action
   ask larvae[
     if age >= larvae-ticks-to-birth
     [ifelse count queens = 0 and queen-roll = true
-      [hatch-queens 1 [set age 0 set energy max-energy-queen set poisoned poisoned set pregnant false set destination "" set color gray set shape "queen" set size 1.1]
+      [hatch-queens 1 [set age 0 set energy energy set poisoned poisoned set pregnant false set destination "" set color gray set shape "queen" set size 1.1]
         die
       ]
-      [hatch-workers 1 [set age 0 set energy max-energy-worker set poisoned poisoned set current-action "" set destination "" set color gray set shape "worker" set size 0.8]
+      [hatch-workers 1 [set age 0 set energy energy set poisoned poisoned set current-action "" set destination "" set color gray set shape "worker" set size 0.8]
         die
       ]]
     set energy (energy - 1)]
@@ -207,8 +207,8 @@ to worker-action
         [
           ifelse not any? patches with [pcolor = yellow and not any? larvae-here]
           [set destination "" set current-action ""]
-          [if destination = "" or [pcolor] of destination != yellow
-          [set destination (min-one-of (patches with [pcolor = yellow and not any? larvae-here]) [distance myself])]
+          [if destination = "" or [pcolor] of destination != yellow or any? larvae-here
+          [set destination (min-one-of (patches with [pcolor = yellow and not any? larvae-here]) [distance patch (hive-size / 2) (hive-size / 2)])]
 
           ifelse patch-here = destination
           [
@@ -255,18 +255,18 @@ to worker-action
         ;;cleaning
         if current-action = "cleaning"
         [
-          ifelse not any? patches with [pcolor = gray]
-          [set current-action ""]
-          [
-          if destination = "" or [pcolor] of destination != gray
-          [set destination (min-one-of (patches with [pcolor = gray]) [distance myself])]
-
-          ifelse patch-here = destination
-          [set pcolor yellow
-            set current-action ""
-            set destination ""]
-          [face destination
-            fd 1]]]
+          ifelse any? patches with [pcolor] = "gray"
+          [if destination = ""
+            [set destination (min-one-of (patches with [pcolor = gray]) [distance myself])]
+            if [pcolor] of destination != gray
+            [set destination ""]
+            if destination != ""
+            [ifelse patch-here = destination
+              [set pcolor yellow set destination "" set current-action ""]
+              [face destination fd 1]]
+          ]
+          [set destination "" set current-action ""]
+        ]
       ]
     ]
 
@@ -275,16 +275,16 @@ to worker-action
       set destination ""
 
       ;;feed queen if there's food and if she's hungry
-      ifelse any? queens with [energy < (max-energy-queen * worker-feed-queen-threshold-%)] and any-honey?
-      [set current-action "feeding-queen"]
-      [
       ifelse energy < (max-energy-worker * worker-feed-self-threshold-%) and any-honey?
       [set current-action "feeding-self"]
+      [
+      ifelse any? queens with [energy < (max-energy-queen * worker-feed-queen-threshold-%)] and any-honey?
+      [set current-action "feeding-queen"]
 
       [ifelse any? larvae and any? larvae with [energy < (max-energy-larvae * worker-feed-larvae-threshold-%)] and any-honey? and any? larvae with [energy < larvae-ticks-to-birth - age]
       [set current-action "feeding-larvae"]
 
-      [ifelse not any? patches with [pcolor = gray]
+      [ifelse not any? patches with [pcolor = gray] and (((count patches with [pcolor = gray]) / (count patches)) < clean-threshold-%)
       [set current-action "gathering-food"]
       [set current-action "cleaning"]]]]
     ]
@@ -333,8 +333,8 @@ end
 GRAPHICS-WINDOW
 846
 26
-1887
-1109
+1232
+414
 -1
 -1
 17.962
@@ -348,9 +348,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-56
+20
 0
-56
+20
 0
 0
 1
@@ -366,7 +366,7 @@ hive-size
 hive-size
 0
 500
-56
+20.0
 1
 1
 patches
@@ -398,7 +398,7 @@ number-of-workers
 number-of-workers
 0
 10000
-1500
+1500.0
 100
 1
 NIL
@@ -413,7 +413,7 @@ max-energy-worker
 max-energy-worker
 0
 100
-55
+70.0
 1
 1
 NIL
@@ -428,7 +428,7 @@ max-energy-queen
 max-energy-queen
 0
 100
-65
+70.0
 1
 1
 NIL
@@ -443,7 +443,7 @@ max-energy-larvae
 max-energy-larvae
 0
 100
-11
+25.0
 1
 1
 NIL
@@ -458,7 +458,7 @@ number-of-food-sources
 number-of-food-sources
 0
 4
-4
+4.0
 1
 1
 NIL
@@ -473,7 +473,7 @@ poison-strength-%
 poison-strength-%
 0
 99
-50
+50.0
 1
 1
 NIL
@@ -488,22 +488,22 @@ number-of-food-sources-poisoned
 number-of-food-sources-poisoned
 0
 4
-0
+0.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-16
-374
-206
-407
+15
+918
+205
+951
 larvae-ticks-to-birth
 larvae-ticks-to-birth
 0
 100
-10
+30.0
 1
 1
 ticks
@@ -518,7 +518,7 @@ queen-birthing-ticks
 queen-birthing-ticks
 0
 100
-1
+1.0
 1
 1
 NIL
@@ -533,52 +533,52 @@ honey-energy-gain
 honey-energy-gain
 0
 100
-40
+40.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-18
-502
-190
-535
+13
+872
+185
+905
 max-age-worker
 max-age-worker
 0
 1000
-200
+60.0
 5
 1
 NIL
 HORIZONTAL
 
 SLIDER
-18
-543
-190
-576
+13
+826
+185
+859
 max-age-queen
 max-age-queen
 0
-1000
-150
+10000
+1260.0
 5
 1
 NIL
 HORIZONTAL
 
 SLIDER
-22
-588
-215
-621
+16
+582
+209
+615
 how-often-to-birth-larvae
 how-often-to-birth-larvae
 0
 100
-1
+3.0
 1
 1
 NIL
@@ -610,7 +610,7 @@ larvae-queen-birthing-chance
 larvae-queen-birthing-chance
 0
 100
-100
+100.0
 1
 1
 NIL
@@ -681,19 +681,19 @@ NIL
 0.0
 10.0
 0.0
-10.0
+1.0
 true
 true
 "" ""
 PENS
-"Feeding queen" 1.0 0 -16777216 true "" "plot count workers with [current-action = \"feeding-queen\"]"
-"Gathering food" 1.0 0 -5825686 true "" "plot count workers with [current-action = \"gathering-food\"]"
-"Storing food" 1.0 0 -2674135 true "" "plot count workers with [current-action = \"storing-food\"]"
-"Cleaning" 1.0 0 -955883 true "" "plot count workers with [current-action = \"cleaning\"]"
-"Feeding self" 1.0 0 -6459832 true "" "plot count workers with [current-action = \"feeding-self\"]"
-"Idle" 1.0 0 -1184463 true "" "plot count workers with [current-action = \"\"]"
-"Gathering honey" 1.0 0 -13345367 true "" "plot count workers with [current-action = \"gathering-honey\"]"
-"Feeding larvae" 1.0 0 -13840069 true "" "plot count workers with [current-action = \"feeding-larvae\"]"
+"Feeding queen" 1.0 0 -16777216 true "" "plot (count workers with [current-action = \"feeding-queen\"]) / count workers"
+"Gathering food" 1.0 0 -5825686 true "" "plot (count workers with [current-action = \"gathering-food\"]) / count workers"
+"Storing food" 1.0 0 -2674135 true "" "plot (count workers with [current-action = \"storing-food\"]) / count workers"
+"Cleaning" 1.0 0 -13791810 true "" "plot (count workers with [current-action = \"cleaning\"]) / count workers"
+"Feeding self" 1.0 0 -6459832 true "" "plot (count workers with [current-action = \"feeding-self\"]) / count workers"
+"Idle" 1.0 0 -1184463 true "" "plot (count workers with [current-action = \"\"]) / count workers"
+"Gathering honey" 1.0 0 -13345367 true "" "plot (count workers with [current-action = \"gathering-honey\"]) / count workers"
+"Feeding larvae" 1.0 0 -13840069 true "" "plot (count workers with [current-action = \"feeding-larvae\"]) / count workers"
 
 MONITOR
 415
@@ -726,7 +726,7 @@ worker-feed-self-threshold-%
 worker-feed-self-threshold-%
 0
 1
-0.45
+0.7
 0.01
 1
 NIL
@@ -756,7 +756,7 @@ worker-feed-queen-threshold-%
 worker-feed-queen-threshold-%
 0
 1
-0.45
+0.6
 0.01
 1
 NIL
@@ -772,6 +772,54 @@ count workers
 17
 1
 11
+
+PLOT
+299
+659
+684
+809
+number of queens
+NIL
+NIL
+0.0
+10.0
+0.0
+1.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot count queens"
+
+SLIDER
+19
+965
+204
+1000
+larvae-birthed-per-egg
+larvae-birthed-per-egg
+0
+1000
+200.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+19
+1022
+192
+1057
+clean-threshold-%
+clean-threshold-%
+0
+1
+0.55
+0.01
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1158,9 +1206,8 @@ false
 0
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
-
 @#$#@#$#@
-NetLogo 5.3.1
+NetLogo 6.0.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -1176,7 +1223,6 @@ true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
-
 @#$#@#$#@
 0
 @#$#@#$#@
