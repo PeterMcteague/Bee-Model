@@ -2,7 +2,7 @@ breed [queens queen]
 breed [larvae larva]
 breed [workers worker]
 
-queens-own [age energy poisoned pregnant destination]
+queens-own [age energy poisoned destination]
 larvae-own [age energy poisoned to-be-queen]
 workers-own [age energy poisoned current-action carrying destination]
 
@@ -22,14 +22,18 @@ to setup-world
   ask patches with [pxcor = hive-size] [set pcolor black]
   ask patches with [pycor = 0] [set pcolor black]
   ask patches with [pycor = hive-size] [set pcolor black]
+  ;;food at the sides
+  ask patches with [pxcor = 1] [set pcolor blue]
+  ask patches with [pxcor = hive-size - 1] [set pcolor blue]
+  ask patches with [pycor = 1] [set pcolor blue]
+  ask patches with [pycor = hive-size - 1] [set pcolor blue]
 end
 
 to setup-queen
   create-queens 1
   ask queens
   [set color gray
-    set age 0
-    set pregnant false
+    set age 5
     set poisoned false
     set energy max-energy-queen
     setxy hive-size / 2 hive-size / 2
@@ -67,9 +71,15 @@ end
 to go
   if count turtles = 0
   [stop]
-  queen-action
-  larvae-action
-  worker-action
+  let i 0
+  while [i <= actions-per-day / ticks-per-day]
+  [
+    queen-action
+    larvae-action
+    worker-action
+    set i (i + 1)
+    ask turtles [set energy (energy - 1)]
+  ]
   age-all
   death-check
   limit-energy
@@ -78,49 +88,44 @@ end
 
 to queen-birth
   move-to patch-here ;;stops the larvae being off center.
-  hatch-larvae larvae-birthed-per-egg [set age 0 set energy max-energy-larvae set poisoned false set shape "larvae" set color white set to-be-queen false]
-  set pregnant false
+  hatch-larvae 1 [set age 0 set energy max-energy-larvae set poisoned false set shape "larvae" set color white set to-be-queen false]
   set color gray
-  set energy (energy - 1) ;apparently the queen uses energy giving birth http://articles.extension.org/pages/73133/honey-bee-queens:-evaluating-the-most-important-colony-member (Queen function in a colony)
-  set destination "unknown"
+  set destination ""
 end
 
 to queen-action
   ask queens[
-    let free-patches patches with [pcolor = yellow and not any? larvae-here]
+    if age > 5
+    [
 
-    if pregnant = false and ticks mod queen-birthing-ticks = 0 and age > 5 [set pregnant true set color pink] ;;5 is days, adjust to scale
+      let free-patches patches with [pcolor = yellow and not any? larvae-here]
 
-    if poison-check = true[
-      ;;if no free spaces don't attempt anything
-      ifelse not any? free-patches
-      [set destination ""]
-      ;;Otherwise set destination to closest patch to middle of hive and to queen
-      [set destination (min-one-of (free-patches with-min [distance patch (hive-size / 2) (hive-size / 2)]) [distance myself])]
+      if poison-check = true[
+        ;;if no free spaces don't attempt anything
+        ifelse not any? free-patches
+        [set destination ""]
+        ;;Otherwise set destination to closest patch to middle of hive and to queen
+        [set destination (min-one-of (free-patches with-min [distance patch (hive-size / 2) (hive-size / 2)]) [distance myself])]
 
-      if destination != ""
-      [ifelse patch-here = destination
-        [queen-birth]
-        [face destination
-          fd 1]
-       ]]
-
-    set energy (energy - 1)]
+        if destination != ""
+        [move-to destination
+          queen-birth]]
+    ]
+   ]
 end
 
 to larvae-action
   ask larvae[
-    if count queens = 0 and not any? larvae with [to-be-queen]
+    if count queens = 0 and not any? larvae with [to-be-queen] = true
     [set to-be-queen true]
-    if age >= larvae-ticks-to-birth
+    if age >= larvae-days-to-birth
     [ifelse to-be-queen = true
-      [hatch-queens 1 [set age 0 set energy energy set poisoned poisoned set pregnant false set destination "" set color gray set shape "queen" set size 1.1]
+      [hatch-queens 1 [set age 5 set energy energy set poisoned poisoned set destination "" set color gray set shape "queen" set size 1.1]
         die
       ]
       [hatch-workers 1 [set age 0 set energy energy set poisoned poisoned set current-action "" set destination "" set color gray set shape "worker" set size 0.8]
         die
-      ]]
-    set energy (energy - 1)]
+      ]]]
 end
 
 to worker-action
@@ -163,7 +168,7 @@ to worker-action
         if current-action = "gathering-honey"
         [
           ifelse not any-honey? and carrying = ""
-          [set current-action ""]
+          [set current-action "gathering-food"]
           [
             if destination = ""
             [set destination (min-one-of (patches with [pcolor = orange or pcolor = red]) [distance myself])]
@@ -171,12 +176,16 @@ to worker-action
             ifelse patch-here = destination
             [
               if [pcolor] of patch-here = orange
-              [set carrying "honey"
-                set pcolor yellow]
+              [set carrying "honey"]
 
               if [pcolor] of patch-here = red
-              [set carrying "poisoned-honey"
-                set pcolor yellow]
+              [set carrying "poisoned-honey"]
+
+              ask patch-here
+              [set honey-uses (honey-uses - 1)
+                if honey-uses <= 0 [set pcolor yellow set honey-uses 0]
+              ]
+
 
               set destination ""
               set current-action ""
@@ -221,6 +230,8 @@ to worker-action
 
             if carrying = "poisoned-food"
             [set pcolor red]
+
+            ask patch-here [set honey-uses honey-uses]
 
             set destination ""
             set carrying ""
@@ -343,9 +354,10 @@ to worker-action
 
       if age >= 12 and age <= 42
       [set current-action "gathering-food"]
-    ]
 
-   set energy (energy - 1)]
+      if energy < (max-energy-worker * worker-feed-self-threshold-%)
+      [set current-action "feeding-self"]
+    ]]
 end
 
 to limit-energy
@@ -355,31 +367,30 @@ to limit-energy
 end
 
 to age-all
-  ask turtles[set age (age + 1)]
+  if ticks mod ticks-per-day = 0
+  [ask turtles[set age (age + 1)]]
 end
 
 to death-check
   ask queens
   [
     if age > max-age-queen[if pcolor = yellow [set pcolor gray] die]
-  ]
+    if energy <= 0
+    [if pcolor = yellow [set pcolor gray]
+      die]]
+
   ask workers
   [
-    if age > max-age-worker[if pcolor = yellow [set pcolor gray] die]
-  ]
-  ask turtles
+    if age > max-age-worker[die]
+    if energy <= 0 [die]]
+
+  ask larvae
   [if energy <= 0
-    [if pcolor = yellow [set pcolor gray]
-      die]
-    ]
+    [if pcolor = yellow [set pcolor gray] die]]
 end
 
 to-report any-honey?
   report (any? patches with [pcolor = red] or any? patches with [pcolor = orange])
-end
-
-to-report queen-roll
-  report random 100 <= larvae-queen-birthing-chance
 end
 
 to-report poison-check
@@ -457,8 +468,8 @@ GRAPHICS-WINDOW
 40
 0
 40
-1
-1
+0
+0
 1
 ticks
 30.0
@@ -518,8 +529,8 @@ SLIDER
 max-energy-worker
 max-energy-worker
 0
-100
-70
+1000
+1000
 1
 1
 NIL
@@ -533,8 +544,8 @@ SLIDER
 max-energy-queen
 max-energy-queen
 0
-100
-70
+1000
+1000
 1
 1
 NIL
@@ -548,8 +559,8 @@ SLIDER
 max-energy-larvae
 max-energy-larvae
 0
-100
-25
+1000
+1000
 1
 1
 NIL
@@ -605,29 +616,14 @@ SLIDER
 793
 207
 826
-larvae-ticks-to-birth
-larvae-ticks-to-birth
-0
-100
-8
+larvae-days-to-birth
+larvae-days-to-birth
+16
+21
+18
 1
 1
-ticks
-HORIZONTAL
-
-SLIDER
-15
-363
-189
-396
-queen-birthing-ticks
-queen-birthing-ticks
-0
-100
-1
-1
-1
-NIL
+days
 HORIZONTAL
 
 SLIDER
@@ -639,7 +635,7 @@ honey-energy-gain
 honey-energy-gain
 0
 100
-40
+100
 1
 1
 NIL
@@ -652,8 +648,8 @@ SLIDER
 780
 max-age-worker
 max-age-worker
-0
-100
+35
+49
 42
 1
 1
@@ -667,25 +663,10 @@ SLIDER
 734
 max-age-queen
 max-age-queen
-0
-10000
-1260
-5
-1
-NIL
-HORIZONTAL
-
-SLIDER
-18
-457
-211
-490
-how-often-to-birth-larvae
-how-often-to-birth-larvae
-0
-100
-0
-1
+730
+1825
+903
+10
 1
 NIL
 HORIZONTAL
@@ -706,21 +687,6 @@ NIL
 NIL
 NIL
 1
-
-SLIDER
-22
-504
-241
-537
-larvae-queen-birthing-chance
-larvae-queen-birthing-chance
-0
-100
-100
-1
-1
-NIL
-HORIZONTAL
 
 PLOT
 291
@@ -799,7 +765,7 @@ worker-feed-self-threshold-%
 worker-feed-self-threshold-%
 0
 1
-0.7
+0.4
 0.01
 1
 NIL
@@ -858,11 +824,11 @@ SLIDER
 840
 206
 873
-larvae-birthed-per-egg
-larvae-birthed-per-egg
-0
-1000
-400
+actions-per-day
+actions-per-day
+240
+1008
+624
 1
 1
 NIL
@@ -888,7 +854,7 @@ PLOT
 660
 897
 810
-queen energy
+queen info
 NIL
 NIL
 0.0
@@ -900,6 +866,7 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "if one-of queens != nobody\n[plot [energy] of one-of queens]"
+"pen-1" 1.0 0 -7500403 true "" "if one-of queens != nobody\n[plot [age] of one-of queens]"
 
 PLOT
 697
@@ -948,6 +915,36 @@ royal-jelly-energy-gain
 0
 100
 50
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+220
+899
+392
+932
+ticks-per-day
+ticks-per-day
+0
+100
+96
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+88
+502
+260
+535
+honey-uses
+honey-uses
+0
+100
+0
 1
 1
 NIL
