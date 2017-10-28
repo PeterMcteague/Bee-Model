@@ -3,7 +3,7 @@ breed [larvae larva]
 breed [workers worker]
 
 queens-own [age energy poisoned pregnant destination]
-larvae-own [age energy poisoned]
+larvae-own [age energy poisoned to-be-queen]
 workers-own [age energy poisoned current-action carrying destination]
 
 to setup
@@ -78,7 +78,7 @@ end
 
 to queen-birth
   move-to patch-here ;;stops the larvae being off center.
-  hatch-larvae larvae-birthed-per-egg [set age 0 set energy max-energy-larvae set poisoned false set shape "larvae" set color white]
+  hatch-larvae larvae-birthed-per-egg [set age 0 set energy max-energy-larvae set poisoned false set shape "larvae" set color white set to-be-queen false]
   set pregnant false
   set color gray
   set energy (energy - 1) ;apparently the queen uses energy giving birth http://articles.extension.org/pages/73133/honey-bee-queens:-evaluating-the-most-important-colony-member (Queen function in a colony)
@@ -89,7 +89,7 @@ to queen-action
   ask queens[
     let free-patches patches with [pcolor = yellow and not any? larvae-here]
 
-    if pregnant = false and ticks mod queen-birthing-ticks = 0 [set pregnant true set color pink]
+    if pregnant = false and ticks mod queen-birthing-ticks = 0 and age > 5 [set pregnant true set color pink] ;;5 is days, adjust to scale
 
     if poison-check = true[
       ;;if no free spaces don't attempt anything
@@ -110,8 +110,10 @@ end
 
 to larvae-action
   ask larvae[
+    if count queens = 0 and not any? larvae with [to-be-queen]
+    [set to-be-queen true]
     if age >= larvae-ticks-to-birth
-    [ifelse count queens = 0 and queen-roll = true
+    [ifelse to-be-queen = true
       [hatch-queens 1 [set age 0 set energy energy set poisoned poisoned set pregnant false set destination "" set color gray set shape "queen" set size 1.1]
         die
       ]
@@ -268,6 +270,43 @@ to worker-action
           ]
         ]
 
+        if current-action = "feed-queen-larvae-royal"
+        [
+          ifelse destination != "" and (destination = nobody or [energy] of destination >= (max-energy-larvae * worker-feed-larvae-threshold-%) or [to-be-queen] of destination = false)
+          [set current-action ""]
+          [ifelse not any? larvae with [to-be-queen] = true
+            [set current-action ""]
+            [ifelse destination = ""
+             [ifelse any? larvae with [energy < (max-energy-larvae * worker-feed-larvae-threshold-%) and [to-be-queen] of larvae = true]
+               [set destination one-of larvae with-min [energy] and [to-be-queen] of larvae = true]
+               [set current-action ""]
+               ]
+             [ifelse [patch-here] of destination = patch-here
+               [ask destination [set energy (energy + royal-jelly-energy-gain)]]
+               [face destination fd 1]
+              ]
+            ]
+          ]
+        ]
+
+        if current-action = "feed-larvae-royal"
+        [
+          ifelse destination != "" and (destination = nobody or [energy] of destination >= (max-energy-larvae * worker-feed-larvae-threshold-%) or [age] of destination > 3)
+          [set current-action ""]
+          [ifelse not any? larvae
+            [set current-action ""]
+            [ifelse destination = ""
+             [ifelse any? larvae with [energy < (max-energy-larvae * worker-feed-larvae-threshold-%) and age <= 3]
+               [set destination one-of larvae with-min [energy]]
+               [set current-action ""]
+               ]
+             [ifelse [patch-here] of destination = patch-here
+               [ask destination [set energy (energy + royal-jelly-energy-gain)]]
+               [face destination fd 1]
+              ]
+            ]
+          ]]
+
         ;;cleaning
         if current-action = "cleaning"
         [
@@ -286,23 +325,24 @@ to worker-action
       ]
     ]
 
-    ;;Assigning new actions to idle bees
+    ;;Assigning actions to bees
     [
       set destination ""
 
-      set current-action "gathering-food"
-
-      if (count patches with [pcolor = gray]) / (count patches) > clean-threshold-%
+      if age <= 2
       [set current-action "cleaning"]
 
-      if any? larvae with [energy < (max-energy-larvae * worker-feed-larvae-threshold-%)]
-      [set current-action "feeding-larvae"]
+      if age <= 11 and age >= 3
+      [set current-action "feed-larvae-royal" ;; Worker larvae <= 3 days of age
+      if age >= 6 and not any? queens and any? larvae with [to-be-queen = true]
+        [set current-action "feed-queen-larvae-royal"] ;;queen larvae <= 3 days of age
+      ]
 
-      if energy < (max-energy-worker * worker-feed-self-threshold-%)
-      [set current-action "feeding-self"]
-
-      if any? queens with [energy < (max-energy-queen * worker-feed-queen-threshold-%)]
+      if age >= 7 and age <= 12 and any? queens with [energy < (max-energy-queen * worker-feed-queen-threshold-%)]
       [set current-action "feeding-queen"]
+
+      if age >= 12 and age <= 42
+      [set current-action "gathering-food"]
     ]
 
    set energy (energy - 1)]
@@ -397,10 +437,10 @@ to-report workers-feeding-larvae
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-846
-26
-1231
-432
+1106
+14
+1852
+781
 -1
 -1
 17.962
@@ -414,9 +454,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-20
+40
 0
-20
+40
 1
 1
 1
@@ -432,7 +472,7 @@ hive-size
 hive-size
 0
 500
-20
+40
 1
 1
 patches
@@ -613,9 +653,9 @@ SLIDER
 max-age-worker
 max-age-worker
 0
-1000
 100
-5
+42
+1
 1
 NIL
 HORIZONTAL
@@ -683,10 +723,10 @@ NIL
 HORIZONTAL
 
 PLOT
-297
-124
-682
-274
+291
+169
+676
+319
 number-of-bees
 NIL
 NIL
@@ -705,10 +745,10 @@ PENS
 "queens" 1.0 0 -2674135 true "" "plot count queens"
 
 PLOT
-298
-287
-683
-437
+292
+332
+677
+482
 patch status
 NIL
 NIL
@@ -726,10 +766,10 @@ PENS
 "Poisoned honey" 1.0 0 -2674135 true "" "plot count patches with [pcolor = red]"
 
 PLOT
-297
-453
-683
-639
+291
+498
+677
+684
 Worker actions
 NIL
 NIL
@@ -796,10 +836,10 @@ NIL
 HORIZONTAL
 
 PLOT
-299
-659
-684
-809
+292
+10
+677
+160
 number of queens
 NIL
 NIL
@@ -879,6 +919,39 @@ true
 PENS
 "energy" 1.0 0 -16777216 true "" "if any? workers [plot mean [energy] of workers]"
 "age" 1.0 0 -7500403 true "" "if any? workers [plot mean [age] of workers]"
+
+PLOT
+293
+693
+671
+813
+Larvae over time
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot count larvae"
+
+SLIDER
+220
+841
+395
+874
+royal-jelly-energy-gain
+royal-jelly-energy-gain
+0
+100
+50
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
