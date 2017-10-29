@@ -23,12 +23,6 @@ to setup-world
   ask patches with [pxcor = hive-size] [set pcolor black]
   ask patches with [pycor = 0] [set pcolor black]
   ask patches with [pycor = hive-size] [set pcolor black]
-  ;;food at the sides
-  ask patches with [pxcor = 1] [set pcolor blue]
-  ask patches with [pxcor = hive-size - 1] [set pcolor blue]
-  ask patches with [pycor = 1] [set pcolor blue]
-  ask patches with [pycor = hive-size - 1] [set pcolor blue]
-  ask patches [set honey-patch-uses 0]
 end
 
 to setup-queen
@@ -62,10 +56,12 @@ to setup-worker
 end
 
 to setup-food
-  if number-of-food-sources > 0 [ask patches with [pxcor = 1 and pycor = hive-size - 1] [set pcolor blue]]
-  if number-of-food-sources > 1 [ask patches with [pxcor = hive-size - 1 and pycor = hive-size - 1] [set pcolor blue]]
-  if number-of-food-sources > 2 [ask patches with [pxcor = 1 and pycor = 1] [set pcolor blue]]
-  if number-of-food-sources > 3 [ask patches with [pxcor = hive-size - 1 and pycor = 1] [set pcolor blue]]
+  ;;food at the sides
+  ask patches with [pxcor = 0 and pycor = hive-size / 2] [set pcolor blue]
+  ask patches with [pxcor = hive-size and pycor = hive-size / 2] [set pcolor blue]
+  ask patches with [pycor = 0 and pxcor = hive-size / 2] [set pcolor blue]
+  ask patches with [pycor = hive-size and pxcor = hive-size / 2] [set pcolor blue]
+  ask patches [set honey-patch-uses 0]
   ask n-of number-of-food-sources-poisoned patches with [pcolor = blue] [set pcolor green]
 end
 
@@ -154,6 +150,7 @@ to worker-action
      ]
 
     [
+      if poison-check[
       ;;Performing assigned action
       if current-action = "cleaning"
       [
@@ -285,7 +282,6 @@ to worker-action
           [set current-action "gathering-honey" set destination ""]
           [ifelse [patch-here] of destination = patch-here
             [
-              if carrying = "poisoned-honey"[ask destination [set poisoned true]]
               ask destination [set energy (energy + honey-energy-gain)]
               set carrying ""
               set destination ""
@@ -296,7 +292,7 @@ to worker-action
           ]
        ]
        [set current-action "" set destination ""]]
-    ]
+    ]]
   ]
 end
 
@@ -495,7 +491,7 @@ number-of-food-sources-poisoned
 number-of-food-sources-poisoned
 0
 4
-0
+2
 1
 1
 NIL
