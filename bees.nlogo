@@ -5,6 +5,7 @@ breed [workers worker]
 queens-own [age energy poisoned destination]
 larvae-own [age energy poisoned to-be-queen]
 workers-own [age energy poisoned current-action carrying destination]
+patches-own [honey-patch-uses]
 
 to setup
   clear-all                           ;; clear the screen
@@ -27,6 +28,7 @@ to setup-world
   ask patches with [pxcor = hive-size - 1] [set pcolor blue]
   ask patches with [pycor = 1] [set pcolor blue]
   ask patches with [pycor = hive-size - 1] [set pcolor blue]
+  ask patches [set honey-patch-uses 0]
 end
 
 to setup-queen
@@ -182,8 +184,8 @@ to worker-action
               [set carrying "poisoned-honey"]
 
               ask patch-here
-              [set honey-uses (honey-uses - 1)
-                if honey-uses <= 0 [set pcolor yellow set honey-uses 0]
+              [set honey-patch-uses (honey-patch-uses - 1)
+                if honey-uses <= 0 [set pcolor yellow set honey-patch-uses 0]
               ]
 
 
@@ -231,7 +233,7 @@ to worker-action
             if carrying = "poisoned-food"
             [set pcolor red]
 
-            ask patch-here [set honey-uses honey-uses]
+            ask patch-here [set honey-patch-uses honey-uses]
 
             set destination ""
             set carrying ""
@@ -248,37 +250,6 @@ to worker-action
           [ifelse carrying = "poisoned-honey"
             [set energy (energy + honey-energy-gain) set poisoned true set carrying "" set destination "" set current-action ""]
             [set energy (energy + honey-energy-gain) set carrying "" set destination "" set current-action ""]]
-        ]
-
-        ;;feeding larvae
-        if current-action = "feeding-larvae"
-        [
-          ifelse destination != "" and (destination = nobody or [energy] of destination >= (max-energy-larvae * worker-feed-larvae-threshold-%))
-          [set current-action ""]
-          [
-            ifelse not any? larvae
-            [set current-action ""]
-            [
-              ifelse carrying != "honey" and carrying != "poisoned-honey"
-              [
-                ifelse any-honey?
-                [set current-action "gathering-honey"]
-                [set current-action "gathering-food"]
-               ]
-              [ifelse destination = ""
-               [ifelse any? larvae with [energy < (max-energy-larvae * worker-feed-larvae-threshold-%)]
-                 [set destination one-of larvae with-min [energy]]
-                 [set current-action ""]
-                 ]
-               [ifelse [patch-here] of destination = patch-here
-                 [if carrying = "poisoned-honey"
-                 [ask destination [set poisoned true]]
-
-                 ask destination [set energy (energy + honey-energy-gain)]]
-                 [face destination fd 1]]
-              ]
-            ]
-          ]
         ]
 
         if current-action = "feed-queen-larvae-royal"
@@ -300,7 +271,7 @@ to worker-action
           ]
         ]
 
-        if current-action = "feed-larvae-royal"
+        if current-action = "feeding-larvae-royal"
         [
           ifelse destination != "" and (destination = nobody or [energy] of destination >= (max-energy-larvae * worker-feed-larvae-threshold-%) or [age] of destination > 3)
           [set current-action ""]
@@ -344,9 +315,10 @@ to worker-action
       [set current-action "cleaning"]
 
       if age <= 11 and age >= 3
-      [set current-action "feed-larvae-royal" ;; Worker larvae <= 3 days of age
-      if age >= 6 and not any? queens and any? larvae with [to-be-queen = true]
-        [set current-action "feed-queen-larvae-royal"] ;;queen larvae <= 3 days of age
+      [
+        set current-action "feeding-larvae-royal" ;; Worker larvae <= 3 days of age
+        if age >= 6 and not any? queens and any? larvae with [to-be-queen = true]
+           [set current-action "feed-queen-larvae-royal"] ;;queen larvae <= 3 days of age
       ]
 
       if age >= 7 and age <= 12 and any? queens with [energy < (max-energy-queen * worker-feed-queen-threshold-%)]
@@ -441,9 +413,15 @@ to-report workers-gathering-honey
   [report 0]
 end
 
-to-report workers-feeding-larvae
+to-report workers-feeding-larvae-royal
   ifelse any? workers
-  [report (count workers with [current-action = "feeding-larvae"]) / count workers]
+  [report (count workers with [current-action = "feeding-larvae-royal"]) / count workers]
+  [report 0]
+end
+
+to-report workers-feeding-queen-royal
+  ifelse any? workers
+  [report (count workers with [current-action = "feeding-queen-royal"]) / count workers]
   [report 0]
 end
 @#$#@#$#@
@@ -490,10 +468,10 @@ patches
 HORIZONTAL
 
 BUTTON
-748
-13
-811
-46
+754
+14
+817
+47
 NIL
 setup
 NIL
@@ -612,25 +590,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-17
-793
-207
-826
-larvae-days-to-birth
-larvae-days-to-birth
 16
+638
+206
+671
+larvae-days-to-birth
+larvae-days-to-birth
+12
 21
-18
+12
 1
 1
 days
 HORIZONTAL
 
 SLIDER
-16
-410
-188
-443
+14
+357
+186
+390
 honey-energy-gain
 honey-energy-gain
 0
@@ -642,10 +620,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-15
-747
-187
-780
+14
+592
+186
+625
 max-age-worker
 max-age-worker
 35
@@ -657,10 +635,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-15
-701
-187
-734
+13
+555
+185
+588
 max-age-queen
 max-age-queen
 730
@@ -672,10 +650,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-675
-13
-738
-46
+687
+14
+750
+47
 NIL
 go
 T
@@ -747,37 +725,22 @@ true
 true
 "" ""
 PENS
-"Feeding queen" 1.0 0 -16777216 true "" "plot workers-feeding-queen"
 "Gathering food" 1.0 0 -5825686 true "" "plot workers-gathering-food"
 "Storing food" 1.0 0 -2674135 true "" "plot workers-storing-food"
 "Cleaning" 1.0 0 -13791810 true "" "plot workers-cleaning"
 "Feeding self" 1.0 0 -6459832 true "" "plot workers-feeding-selves"
 "Idle" 1.0 0 -1184463 true "" "plot workers-idle"
 "Gathering honey" 1.0 0 -13345367 true "" "plot workers-gathering-honey"
-"Feeding larvae" 1.0 0 -13840069 true "" "plot workers-feeding-larvae"
+"Feeding larvae royal jelly" 1.0 0 -7500403 true "" "plot workers-feeding-larvae-royal"
+"Feeding queen royal jelly" 1.0 0 -16382462 true "" "plot workers-feeding-queen-royal"
 
 SLIDER
-22
-552
-242
-585
+12
+440
+232
+473
 worker-feed-self-threshold-%
 worker-feed-self-threshold-%
-0
-1
-0.4
-0.01
-1
-NIL
-HORIZONTAL
-
-SLIDER
-14
-648
-250
-681
-worker-feed-larvae-threshold-%
-worker-feed-larvae-threshold-%
 0
 1
 0.5
@@ -787,15 +750,30 @@ NIL
 HORIZONTAL
 
 SLIDER
-6
-602
-242
-635
+12
+518
+248
+551
+worker-feed-larvae-threshold-%
+worker-feed-larvae-threshold-%
+0
+1
+0.6
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+12
+480
+248
+513
 worker-feed-queen-threshold-%
 worker-feed-queen-threshold-%
 0
 1
-0.7
+0.75
 0.01
 1
 NIL
@@ -820,10 +798,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count queens"
 
 SLIDER
-21
-840
-206
-873
+20
+685
+205
+718
 actions-per-day
 actions-per-day
 240
@@ -835,10 +813,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-21
-897
-194
-930
+20
+742
+193
+775
 clean-threshold-%
 clean-threshold-%
 0
@@ -906,10 +884,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count larvae"
 
 SLIDER
-220
-841
-395
-874
+20
+782
+195
+815
 royal-jelly-energy-gain
 royal-jelly-energy-gain
 0
@@ -921,10 +899,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-220
-899
-392
-932
+20
+840
+192
+873
 ticks-per-day
 ticks-per-day
 0
@@ -936,15 +914,15 @@ NIL
 HORIZONTAL
 
 SLIDER
-88
-502
-260
-535
+12
+398
+184
+431
 honey-uses
 honey-uses
 0
 100
-0
+15
 1
 1
 NIL
