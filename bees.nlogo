@@ -336,8 +336,8 @@ end
 GRAPHICS-WINDOW
 1106
 14
-2390
-1319
+2391
+1320
 -1
 -1
 17.962
@@ -781,10 +781,10 @@ PENS
 "energy " 1.0 0 -7500403 true "" "if any? larvae[plot mean [energy] of larvae]"
 
 SLIDER
-30
-740
-205
-773
+17
+727
+192
+760
 royal-jelly-energy-gain
 royal-jelly-energy-gain
 0
@@ -796,10 +796,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-30
-797
-202
-830
+17
+769
+189
+802
 ticks-per-day
 ticks-per-day
 0
@@ -819,17 +819,17 @@ honey-uses
 honey-uses
 1
 100
-5
+1
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-34
-847
-221
-881
+17
+810
+204
+843
 worker-jelly-energy-gain
 worker-jelly-energy-gain
 0
