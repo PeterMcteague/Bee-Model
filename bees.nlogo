@@ -81,8 +81,8 @@ to go
     larvae-action
     worker-action
     set i (i + 1)
-    ask turtles [set energy (energy - 1)]
   ]
+  ask turtles [set energy (energy - 1)]
   age-all
   death-check
   limit-energy
@@ -137,6 +137,9 @@ to worker-action
     ifelse current-action = ""
     [
      ;;Assigning current action
+     if age >= 12 and any? patches with [pcolor = yellow and not any? larvae-here]
+     [set current-action "gathering-food"]
+
      if age <= 16 and any? patches with [pcolor = gray]
      [set current-action "cleaning"]
 
@@ -145,9 +148,6 @@ to worker-action
 
      if age >= 7 and age < 12 and any? queens with [energy < (max-energy-queen * worker-feed-queen-threshold-%)]
      [set current-action "feeding-queen"]
-
-     if age >= 12 and any? patches with [pcolor = yellow and not any? larvae-here]
-     [set current-action "gathering-food"]
 
      if energy < (max-energy-worker * worker-feed-self-threshold-%)
      [set current-action "feeding-self"]
@@ -295,7 +295,7 @@ to worker-action
            ]
           ]
        ]
-        [set current-action "" set destination ""]]
+       [set current-action "" set destination ""]]
     ]
   ]
 end
@@ -654,7 +654,7 @@ worker-feed-self-threshold-%
 worker-feed-self-threshold-%
 0
 1
-0.8
+0.85
 0.01
 1
 NIL
@@ -669,7 +669,7 @@ worker-feed-larvae-threshold-%
 worker-feed-larvae-threshold-%
 0
 1
-0.8
+0.85
 0.01
 1
 NIL
@@ -684,7 +684,7 @@ worker-feed-queen-threshold-%
 worker-feed-queen-threshold-%
 0
 1
-0.8
+0.85
 0.01
 1
 NIL
@@ -723,21 +723,6 @@ actions-per-day
 NIL
 HORIZONTAL
 
-SLIDER
-20
-742
-193
-775
-clean-threshold-%
-clean-threshold-%
-0
-1
-0.36
-0.01
-1
-NIL
-HORIZONTAL
-
 PLOT
 700
 689
@@ -751,11 +736,11 @@ NIL
 0.0
 10.0
 true
-false
+true
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "if one-of queens != nobody\n[plot [energy] of one-of queens]"
-"pen-1" 1.0 0 -7500403 true "" "if one-of queens != nobody\n[plot [age] of one-of queens]"
+"energy" 1.0 0 -16777216 true "" "if one-of queens != nobody\n[plot [energy] of one-of queens]"
+"age" 1.0 0 -7500403 true "" "if one-of queens != nobody\n[plot [age] of one-of queens]"
 
 PLOT
 697
@@ -800,10 +785,10 @@ PENS
 "energy " 1.0 0 -7500403 true "" "if any? larvae[plot mean [energy] of larvae]"
 
 SLIDER
-20
-782
-195
-815
+30
+740
+205
+773
 royal-jelly-energy-gain
 royal-jelly-energy-gain
 0
@@ -815,10 +800,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-20
-840
-192
-873
+30
+797
+202
+830
 ticks-per-day
 ticks-per-day
 0
@@ -838,22 +823,22 @@ honey-uses
 honey-uses
 1
 100
-10
+5
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-77
-935
-264
-969
+34
+847
+221
+881
 worker-jelly-energy-gain
 worker-jelly-energy-gain
 0
 500
-50
+500
 10
 1
 NIL
