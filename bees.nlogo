@@ -336,8 +336,8 @@ end
 GRAPHICS-WINDOW
 1106
 14
-2391
-1320
+2389
+1298
 -1
 -1
 17.962
@@ -369,7 +369,7 @@ hive-size
 hive-size
 0
 500
-70
+70.0
 1
 1
 patches
@@ -394,21 +394,6 @@ NIL
 
 SLIDER
 12
-56
-184
-89
-number-of-workers
-number-of-workers
-0
-10000
-1500
-100
-1
-NIL
-HORIZONTAL
-
-SLIDER
-12
 98
 184
 131
@@ -416,7 +401,7 @@ max-energy-worker
 max-energy-worker
 0
 1000
-500
+500.0
 1
 1
 NIL
@@ -431,7 +416,7 @@ max-energy-queen
 max-energy-queen
 0
 1000
-500
+500.0
 1
 1
 NIL
@@ -446,7 +431,7 @@ max-energy-larvae
 max-energy-larvae
 0
 1000
-500
+500.0
 1
 1
 NIL
@@ -461,7 +446,7 @@ number-of-food-sources
 number-of-food-sources
 0
 4
-4
+4.0
 1
 1
 NIL
@@ -476,7 +461,7 @@ poison-strength-%
 poison-strength-%
 0
 99
-50
+50.0
 1
 1
 NIL
@@ -491,7 +476,7 @@ number-of-food-sources-poisoned
 number-of-food-sources-poisoned
 0
 4
-2
+2.0
 1
 1
 NIL
@@ -506,7 +491,7 @@ larvae-days-to-birth
 larvae-days-to-birth
 12
 21
-12
+12.0
 1
 1
 days
@@ -521,7 +506,7 @@ honey-energy-gain
 honey-energy-gain
 0
 500
-500
+500.0
 1
 1
 NIL
@@ -536,7 +521,7 @@ max-age-worker
 max-age-worker
 35
 49
-42
+42.0
 1
 1
 NIL
@@ -551,7 +536,7 @@ max-age-queen
 max-age-queen
 730
 1825
-903
+903.0
 10
 1
 NIL
@@ -713,7 +698,7 @@ actions-per-day
 actions-per-day
 240
 1008
-624
+624.0
 1
 1
 NIL
@@ -789,7 +774,7 @@ royal-jelly-energy-gain
 royal-jelly-energy-gain
 0
 500
-500
+500.0
 1
 1
 NIL
@@ -804,7 +789,7 @@ ticks-per-day
 ticks-per-day
 0
 100
-96
+96.0
 1
 1
 NIL
@@ -819,7 +804,7 @@ honey-uses
 honey-uses
 1
 100
-1
+1.0
 1
 1
 NIL
@@ -834,11 +819,21 @@ worker-jelly-energy-gain
 worker-jelly-energy-gain
 0
 500
-500
+500.0
 10
 1
 NIL
 HORIZONTAL
+
+CHOOSER
+13
+50
+152
+95
+number-of-workers
+number-of-workers
+1500 3000 7000
+0
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1225,9 +1220,8 @@ false
 0
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
-
 @#$#@#$#@
-NetLogo 5.3.1
+NetLogo 6.0.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -1243,7 +1237,6 @@ true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
-
 @#$#@#$#@
 0
 @#$#@#$#@
