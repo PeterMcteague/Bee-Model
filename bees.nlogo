@@ -838,26 +838,72 @@ number-of-workers
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+The model simulates the reproduction and foraging activities of a cross section of a hive in a premade frame and how they are affected by exposure to neonicotinoids. The food source is directly applied to the hive. There are options which allow differing concentrations of insecticide exposure to be selected.
+
+Gray patterns are unusable cells until they are cleaned.
+Orange cells are full of honey(food).
+Red cells are full of contaminated honey, only bees which have consumed this will be affected by the insecticide.
+Yellow cells are part of the hive although unused.
+Blue cells are food sources.
+
+## ABSTRACTIONS
+
+-Hive is represented in patches instead of hex as netlogo did not easily support this
+-Drone bees are abstracted as in the study the queen was impregnated already
+-Larvae and eggs are interchangable as larvae do not perform any different actions
+-Nectar,honey and pollen are all treated as the same in the model
+-Only one queen bee can be present as in the study any hives with multiple queens were excluded.
+-% chance is used to simulate the effect of the insecticide.
+-queen moves instantly to keep up with the rate of egg laying over time
+
+
 
 ## HOW IT WORKS
+
+The queen plants eggs at a rate obtained from the referenced study while the worker bees must perform certain duties depending on where they are in their lifecycle. Such as foraging, cleaning the hive, feeding themselves, feeding the queen, and feeding the brood.
+The bees will become more inactive and less efficient at greater exposure levels, although larger hives will be less affected. At higher exposure the bees will have to roll higher to perform an action.
+
 
 (what rules the agents use to create the overall behavior of the model)
 
 ## HOW TO USE IT
 
+A number of workers, hive size, poison strength, number of poisoned food sources should be selected and then "setup" should be selected. "Go" should then be selected to start the simulation. 
+
+Most settings are set up with detailed values before hand to reflect a real hives conditions.
+
+-hive size is the sqaure root of the number of patches the hive will be, this was pulled from the study
+-max energy values are how much energy an agent can have, when the energy value reaches 0 it will die.
+-number of food sources is how many edges of the hive the bees can forage honey from
+-poison strength % is how much concentration of insecticide is in the tainted food sources.
+-number of food sources poisoned is how many of the edges are tainted.
+-honey energy gain is how much energy a bee receives per feeding session
+-honey uses is how many times a honey patch can be used before it is emptied
+-feeding thresholds are at what percentage of energy the worker bees will begin to try and feed the agent described.
+-max age is how long a bee will live, age is in days and goes up every 96 ticks
+-larvae days to birth is how long a larvae takes to mature into a worker bee
+-actions per day is the number of actions an agent can perform in a day
+-royal jelly energy gain is how much energy an agent will gain from consuming royal jelly(only the queen will consume this)
+-ticks per day is how many ticks a day takes to complete
+-worker jelly energy gain is how much energy an agent will gain from consuming worker jelly(only the larvae will consume this)
+
 (how to use the model, including a description of each of the items in the Interface tab)
 
 ## THINGS TO NOTICE
+
+While the hive is exposed to more insecticide the agents actions will become more inactive and less succesfull. Swarming behaviour can be observed. The brood pattern(the number of spaces unused) of the hive can be seen to be less successfull at higher levels of exposure, although this is somewhat offset by larger hives.
 
 (suggested things for the user to notice while running the model)
 
 ## THINGS TO TRY
 
+Try changing the hive size, number of workers, number of food sources, number of poisoned food sources, and poison strength % as these where the observed variables in the study and so are what generate the interesting behaviour.
+
 (suggested things for the user to try to do (move sliders, switches, etc.) with the model)
 
 ## EXTENDING THE MODEL
 
+The model could be extended in terms of removing some of the abstraction, such as accouting for nectar and pollen sources, adding drones,
 (suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
 
 ## NETLOGO FEATURES
@@ -1221,7 +1267,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.0.1
+NetLogo 6.0.2
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
