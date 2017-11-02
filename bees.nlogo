@@ -205,12 +205,12 @@ to worker-action
 
       if current-action = "gathering-honey"
       [
-        if not any-honey?
-        [set current-action "gathering-food"]
+        ifelse not any-honey?
+        [set current-action "gathering-food" set destination ""]
 
-        ifelse destination = ""
+        [ifelse destination = ""
         [set destination min-one-of (patches with [pcolor = orange or pcolor = red]) [distance myself]]
-        [if [pcolor] of destination != yellow or any? larvae-here [set destination min-one-of (patches with [pcolor = orange or pcolor = red]) [distance myself]]]
+        [if [pcolor] of destination != orange or [pcolor] of destination != red or any? larvae-here or destination = nobody [set destination min-one-of (patches with [pcolor = orange or pcolor = red]) [distance myself]]]
 
         ifelse patch-here = destination
         [set current-action "" set destination ""
@@ -226,7 +226,7 @@ to worker-action
             if honey-patch-uses <= 0 [set pcolor yellow set honey-patch-uses 0]
           ]
           ]
-        [face destination fd 1]
+        [face destination fd 1]]
         ]
 
       if current-action = "feeding-self"
@@ -336,8 +336,8 @@ end
 GRAPHICS-WINDOW
 1106
 14
-2389
-1298
+2391
+1320
 -1
 -1
 17.962
@@ -354,8 +354,8 @@ GRAPHICS-WINDOW
 70
 0
 70
-1
-1
+0
+0
 1
 ticks
 30.0
@@ -369,7 +369,7 @@ hive-size
 hive-size
 0
 500
-70.0
+70
 1
 1
 patches
@@ -401,7 +401,7 @@ max-energy-worker
 max-energy-worker
 0
 1000
-500.0
+500
 1
 1
 NIL
@@ -416,7 +416,7 @@ max-energy-queen
 max-energy-queen
 0
 1000
-500.0
+500
 1
 1
 NIL
@@ -431,7 +431,7 @@ max-energy-larvae
 max-energy-larvae
 0
 1000
-500.0
+500
 1
 1
 NIL
@@ -446,7 +446,7 @@ number-of-food-sources
 number-of-food-sources
 0
 4
-4.0
+4
 1
 1
 NIL
@@ -461,7 +461,7 @@ poison-strength-%
 poison-strength-%
 0
 99
-50.0
+50
 1
 1
 NIL
@@ -476,7 +476,7 @@ number-of-food-sources-poisoned
 number-of-food-sources-poisoned
 0
 4
-2.0
+0
 1
 1
 NIL
@@ -491,7 +491,7 @@ larvae-days-to-birth
 larvae-days-to-birth
 12
 21
-12.0
+12
 1
 1
 days
@@ -506,7 +506,7 @@ honey-energy-gain
 honey-energy-gain
 0
 500
-500.0
+500
 1
 1
 NIL
@@ -521,7 +521,7 @@ max-age-worker
 max-age-worker
 35
 49
-42.0
+42
 1
 1
 NIL
@@ -536,7 +536,7 @@ max-age-queen
 max-age-queen
 730
 1825
-903.0
+903
 10
 1
 NIL
@@ -698,7 +698,7 @@ actions-per-day
 actions-per-day
 240
 1008
-624.0
+624
 1
 1
 NIL
@@ -774,7 +774,7 @@ royal-jelly-energy-gain
 royal-jelly-energy-gain
 0
 500
-500.0
+500
 1
 1
 NIL
@@ -789,7 +789,7 @@ ticks-per-day
 ticks-per-day
 0
 100
-96.0
+96
 1
 1
 NIL
@@ -804,7 +804,7 @@ honey-uses
 honey-uses
 1
 100
-1.0
+1
 1
 1
 NIL
@@ -819,7 +819,7 @@ worker-jelly-energy-gain
 worker-jelly-energy-gain
 0
 500
-500.0
+500
 10
 1
 NIL
@@ -868,7 +868,7 @@ The bees will become more inactive and less efficient at greater exposure levels
 
 ## HOW TO USE IT
 
-A number of workers, hive size, poison strength, number of poisoned food sources should be selected and then "setup" should be selected. "Go" should then be selected to start the simulation. 
+A number of workers, hive size, poison strength, number of poisoned food sources should be selected and then "setup" should be selected. "Go" should then be selected to start the simulation.
 
 Most settings are set up with detailed values before hand to reflect a real hives conditions.
 
@@ -1266,8 +1266,9 @@ false
 0
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
+
 @#$#@#$#@
-NetLogo 6.0.2
+NetLogo 5.3.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -1283,6 +1284,7 @@ true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
+
 @#$#@#$#@
 0
 @#$#@#$#@
