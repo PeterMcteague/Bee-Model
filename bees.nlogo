@@ -57,10 +57,10 @@ end
 
 to setup-food
   ;;food at the sides
-  ask patches with [pxcor = 0 and pycor = hive-size / 2] [set pcolor blue]
-  ask patches with [pxcor = hive-size and pycor = hive-size / 2] [set pcolor blue]
-  ask patches with [pycor = 0 and pxcor = hive-size / 2] [set pcolor blue]
-  ask patches with [pycor = hive-size and pxcor = hive-size / 2] [set pcolor blue]
+  ask patches with [pxcor = 0 and pycor = round (hive-size / 2)] [set pcolor blue]
+  ask patches with [pxcor = hive-size and pycor = round (hive-size / 2)] [set pcolor blue]
+  ask patches with [pycor = 0 and pxcor = round (hive-size / 2)] [set pcolor blue]
+  ask patches with [pycor = hive-size and pxcor = round (hive-size / 2)] [set pcolor blue]
   ask patches [set honey-patch-uses 0]
   ask n-of number-of-food-sources-poisoned patches with [pcolor = blue] [set pcolor green]
 end
@@ -336,8 +336,8 @@ end
 GRAPHICS-WINDOW
 1106
 14
-2391
-1320
+3019
+1948
 -1
 -1
 17.962
@@ -351,9 +351,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-70
+105
 0
-70
+105
 0
 0
 1
@@ -369,7 +369,7 @@ hive-size
 hive-size
 0
 500
-70
+105
 1
 1
 patches
@@ -439,21 +439,6 @@ HORIZONTAL
 
 SLIDER
 12
-228
-184
-261
-number-of-food-sources
-number-of-food-sources
-0
-4
-4
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-12
 272
 184
 305
@@ -476,7 +461,7 @@ number-of-food-sources-poisoned
 number-of-food-sources-poisoned
 0
 4
-0
+1
 1
 1
 NIL
@@ -833,7 +818,7 @@ CHOOSER
 number-of-workers
 number-of-workers
 1500 3000 7000
-0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
