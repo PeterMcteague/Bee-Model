@@ -1,3 +1,5 @@
+extensions [profiler]
+
 breed [queens queen]
 breed [larvae larva]
 breed [workers worker]
@@ -7,13 +9,41 @@ larvae-own [age energy poisoned to-be-queen]
 workers-own [age energy poisoned current-action carrying destination]
 patches-own [honey-patch-uses]
 
+globals [food-patches honey-patches dead-patches empty-patches larvae-patches]
+
 to setup
   clear-all                           ;; clear the screen
   setup-world
   setup-food
   setup-worker
   setup-queen
+  update-patch-agentset
   reset-ticks
+end
+
+to update-honey-patches
+	set honey-patches patches with [pcolor = orange or pcolor = red]
+end
+
+to update-dead-patches
+	set dead-patches patches with [pcolor = gray]
+end
+
+to update-empty-patches
+	set empty-patches patches with [pcolor = yellow and not any? larvae-here]
+end
+
+to update-larvae-patches
+	set larvae-patches patches with [any? larvae-here]
+end
+
+to update-patch-agentset
+  set food-patches patches with [pcolor = blue or pcolor = green]
+  ;;Following called as they are updated in the code too
+  update-honey-patches
+  update-dead-patches
+  update-empty-patches
+  update-larvae-patches
 end
 
 to setup-world
@@ -68,21 +98,22 @@ end
 ;;Main
 
 to go
-  if count turtles = 0
+  ifelse count turtles = 0
   [stop]
-  let i 0
-  while [i <= actions-per-day / ticks-per-day]
   [
-    queen-action
-    larvae-action
-    worker-action
-    set i (i + 1)
+    let repetitions (actions-per-day / ticks-per-day)
+    repeat repetitions[
+      queen-action
+      larvae-action
+      worker-action]
+    ask turtles [set energy (energy - 1)]
+    age-all
+    death-check
+    limit-energy
+    if plots-on
+    [update-plots]
+    tick-advance 1
   ]
-  ask turtles [set energy (energy - 1)]
-  age-all
-  death-check
-  limit-energy
-  tick
 end
 
 to queen-birth
@@ -90,25 +121,31 @@ to queen-birth
   hatch-larvae 1 [set age 0 set energy max-energy-larvae set poisoned false set shape "larvae" set color white set to-be-queen false]
   set color gray
   set destination ""
+  update-empty-patches
+  update-larvae-patches
 end
 
 to queen-action
   ask queens[
     if age > 5
     [
-
-      let free-patches patches with [pcolor = yellow and not any? larvae-here]
-
       if poison-check = true[
         ;;if no free spaces don't attempt anything
-        ifelse not any? free-patches
+        ifelse not any? empty-patches
         [set destination ""]
-        ;;Otherwise set destination to closest patch to middle of hive and to queen
-        [set destination (min-one-of (free-patches with-min [distance patch (hive-size / 2) (hive-size / 2)]) [distance myself])]
+        [set destination (min-one-of (empty-patches with-min [distance patch (hive-size / 2) (hive-size / 2)]) [distance myself])] ;;Otherwise set destination to closest patch to middle of hive and to queen
 
-        if destination != ""
-        [move-to destination
-          queen-birth]]
+        ifelse destination != "" and member? destination empty-patches
+        [
+          move-to destination
+          queen-birth
+        ]
+        [
+          set destination (min-one-of (empty-patches with-min [distance patch (hive-size / 2) (hive-size / 2)]) [distance myself])
+          move-to destination
+          queen-birth
+        ]
+      ]
     ]
    ]
 end
@@ -117,183 +154,215 @@ to larvae-action
   ask larvae[
     if count queens = 0 and not any? larvae with [to-be-queen] = true
     [set to-be-queen true set color red]
+
     if age >= larvae-days-to-birth
     [ifelse to-be-queen = true
       [hatch-queens 1 [set age 5 set energy energy set poisoned poisoned set destination "" set color gray set shape "queen" set size 1.1]
-        die
-      ]
+        die]
       [hatch-workers 1 [set age 0 set energy energy set poisoned poisoned set current-action "" set destination "" set color gray set shape "worker" set size 0.8]
-        die
-      ]]]
+        die]
+      update-empty-patches
+      update-larvae-patches
+     ]
+  ]
+end
+
+to set-current-action-worker
+	;;Assigning current action
+   if age >= 12 and any? empty-patches
+   [set current-action "gathering-food"]
+	
+   if age <= 16 and any? dead-patches
+   [set current-action "cleaning"]
+
+   if age >= 4 and age < 12 and any? larvae with [energy < (max-energy-larvae * worker-feed-larvae-threshold-%)]
+   [set current-action "feeding-larvae"]
+
+   if age >= 7 and age < 12 and any? queens with [energy < (max-energy-queen * worker-feed-queen-threshold-%)]
+   [set current-action "feeding-queen"]
+
+   if energy < (max-energy-worker * worker-feed-self-threshold-%)
+   [set current-action "feeding-self"]
+end
+
+to worker-clean
+	ifelse any? dead-patches
+	[
+    	if destination = "" or not is-patch? destination or (destination != "" and not member? destination dead-patches)
+    	[set destination (min-one-of dead-patches [distance myself])]
+
+    	ifelse patch-here = destination
+    	[set pcolor yellow set current-action "" set destination "" update-dead-patches  update-empty-patches]
+    	[face destination fd 1]
+	]
+	[set current-action "" set destination ""]
+end
+
+to worker-take-food
+  if destination = ""
+	  [set destination (min-one-of food-patches [distance myself])]
+
+	   ifelse patch-here = destination
+    	   [ifelse [pcolor] of patch-here = blue
+      		 [set carrying "food" ]
+      		 [set carrying "poisoned-food"]
+      		 set destination ""]
+	   [face destination fd 1]
+end
+
+to worker-store-food
+  ifelse any? empty-patches
+	[
+    if destination = "" or (destination != "" and not member? destination empty-patches)
+	  [
+      set destination (min-one-of (empty-patches with-min [distance patch (hive-size / 2) (hive-size / 2)]) [distance myself])
+    ]
+
+	  ifelse patch-here = destination
+	  [
+        ifelse carrying = "food"
+    		[set pcolor orange]
+    		[set pcolor red]
+
+    		ask patch-here [set honey-patch-uses honey-uses]
+
+        update-honey-patches
+        update-empty-patches
+    		set destination ""
+    		set carrying ""
+    		set current-action ""
+    ]
+	  [face destination fd 1]
+  ]
+	[set current-action "" set destination ""]
+end
+
+to worker-gather-food
+	ifelse carrying = ""
+	[worker-take-food]
+	[worker-store-food]
+end
+
+to worker-gather-honey
+	ifelse not any? honey-patches
+	[set current-action "gathering-food" set destination ""]
+
+	[ifelse destination = ""
+	[set destination min-one-of honey-patches [distance myself]]
+	[if not member? destination honey-patches or destination = nobody
+      [set destination min-one-of honey-patches [distance myself]]]
+
+	ifelse patch-here = destination
+	[set current-action "" set destination ""
+	  if [pcolor] of patch-here = orange
+	  [set carrying "honey"]
+
+	  if [pcolor] of patch-here = red
+	  [set carrying "poisoned-honey"]
+
+	  ask patch-here
+	  [
+		set honey-patch-uses (honey-patch-uses - 1)
+		if honey-patch-uses <= 0
+        [
+          set pcolor yellow
+          set honey-patch-uses 0
+          update-honey-patches
+          update-empty-patches
+        ]
+	  ]
+	  ]
+	[face destination fd 1]]
+end
+
+to worker-feed-self
+	ifelse carrying != "honey" or carrying != "poisoned-honey"
+	[set current-action "gathering-honey"]
+	[
+	  if carrying = "poisoned-honey"[set poisoned true]
+	  set energy (energy + honey-energy-gain)
+	  set carrying ""
+	  set current-action ""
+	]
+end
+
+to worker-feed-queen
+	ifelse carrying != "honey" or carrying != "poisoned-honey"
+	[set current-action "gathering-honey"]
+	[
+	  move-to one-of queens ;;have to do this as queen had to use move-to in order to birth the required eggs per tick
+	  if carrying = "poisoned-honey"[ask one-of queens [set poisoned true]]
+	  ask one-of queens [set energy (energy + honey-energy-gain)]
+	  set carrying ""
+	  set current-action ""
+	]
+end
+
+to worker-feed-larvae
+	ifelse any? larvae
+	[
+	if destination = "" or (destination != "" and destination = nobody)
+	[set destination one-of larvae with-min [energy]]
+
+	if destination != "" and not member? destination (larvae with-min [energy])
+	[set destination one-of larvae with-min [energy]]
+
+	ifelse [age] of destination < 3
+	[
+	  ;;At below 3 they're fed on royal jelly so we dont' need honey
+	  ifelse [patch-here] of destination = patch-here
+		[
+		  ifelse [to-be-queen] of destination = true
+		  [ask destination [set energy (energy + royal-jelly-energy-gain)]]
+		  [ask destination [set energy (energy + worker-jelly-energy-gain)]]
+		  set destination ""
+		  set current-action ""
+		  ]
+		[face destination fd 1]
+	 ]
+	[
+	  ifelse carrying = ""
+	  [set current-action "gathering-honey" set destination ""]
+	  [ifelse [patch-here] of destination = patch-here
+		[
+		  ask destination [set energy (energy + honey-energy-gain)]
+		  set carrying ""
+		  set destination ""
+		  set current-action ""
+		  ]
+		[face destination fd 1]
+	   ]
+	  ]
+   ]
+   [set current-action "" set destination ""]
 end
 
 to worker-action
   ask workers
   [
     ifelse current-action = ""
-    [
-     ;;Assigning current action
-     if age >= 12 and any? patches with [pcolor = yellow and not any? larvae-here]
-     [set current-action "gathering-food"]
+    [set-current-action-worker]
 
-     if age <= 16 and any? patches with [pcolor = gray]
-     [set current-action "cleaning"]
+    [if poison-check[
+      	  ;;Performing assigned action
+      	  if current-action = "cleaning"
+      	  [worker-clean]
 
-     if age >= 4 and age < 12 and any? larvae with [energy < (max-energy-larvae * worker-feed-larvae-threshold-%)]
-     [set current-action "feeding-larvae"]
+      	  if current-action = "gathering-food"
+      	  [worker-gather-food]
 
-     if age >= 7 and age < 12 and any? queens with [energy < (max-energy-queen * worker-feed-queen-threshold-%)]
-     [set current-action "feeding-queen"]
+      	  if current-action = "gathering-honey"
+      	  [worker-gather-honey]
 
-     if energy < (max-energy-worker * worker-feed-self-threshold-%)
-     [set current-action "feeding-self"]
-     ]
+      	  if current-action = "feeding-self"
+      	  [worker-feed-self]
 
-    [
-      if poison-check[
-      ;;Performing assigned action
-      if current-action = "cleaning"
-      [
-        ifelse any? patches with [pcolor = gray]
-        [
-        if destination = "" or not is-patch? destination or (destination != "" and [pcolor] of destination != gray)
-        [set destination (min-one-of (patches with [pcolor = gray]) [distance myself])]
+      	  if current-action = "feeding-queen"
+      	  [worker-feed-queen]
 
-        ifelse patch-here = destination
-        [set pcolor yellow set current-action "" set destination ""]
-        [face destination fd 1]
-        ]
-        [set current-action "" set destination ""]
-        ]
-
-      if current-action = "gathering-food"
-      [
-        ifelse carrying = ""
-        [
-          if destination = ""
-          [set destination (min-one-of (patches with [pcolor = green or pcolor = blue]) [distance myself])]
-
-           ifelse patch-here = destination
-           [ifelse [pcolor] of patch-here = blue
-             [set carrying "food" ]
-             [set carrying "poisoned-food"]
-             set destination ""]
-           [face destination fd 1]
-        ]
-        [
-          ifelse any? patches with ([pcolor = yellow and not any? larvae-here])
-          [
-          if destination = "" or (destination != "" and ([pcolor] of destination != yellow or any? larvae-here))
-          [set destination (min-one-of ((patches with [pcolor = yellow and not any? larvae-here]) with-min [distance patch (hive-size / 2) (hive-size / 2)]) [distance myself])]
-
-          ifelse patch-here = destination
-          [if carrying = "food"
-            [set pcolor orange]
-
-            if carrying = "poisoned-food"
-            [set pcolor red]
-
-            ask patch-here [set honey-patch-uses honey-uses]
-
-            set destination ""
-            set carrying ""
-            set current-action ""]
-          [face destination fd 1]]
-          [set current-action "" set destination ""]
-         ]
-      ]
-
-      if current-action = "gathering-honey"
-      [
-        ifelse not any-honey?
-        [set current-action "gathering-food" set destination ""]
-
-        [ifelse destination = ""
-        [set destination min-one-of (patches with [pcolor = orange or pcolor = red]) [distance myself]]
-        [if [pcolor] of destination != orange or [pcolor] of destination != red or any? larvae-here or destination = nobody [set destination min-one-of (patches with [pcolor = orange or pcolor = red]) [distance myself]]]
-
-        ifelse patch-here = destination
-        [set current-action "" set destination ""
-          if [pcolor] of patch-here = orange
-          [set carrying "honey"]
-
-          if [pcolor] of patch-here = red
-          [set carrying "poisoned-honey"]
-
-          ask patch-here
-          [
-            set honey-patch-uses (honey-patch-uses - 1)
-            if honey-patch-uses <= 0 [set pcolor yellow set honey-patch-uses 0]
-          ]
-          ]
-        [face destination fd 1]]
-        ]
-
-      if current-action = "feeding-self"
-      [
-        ifelse carrying = ""
-        [set current-action "gathering-honey"]
-        [
-          if carrying = "poisoned-honey"[set poisoned true]
-          set energy (energy + honey-energy-gain)
-          set carrying ""
-          set current-action ""
-          ]
-      ]
-
-      if current-action = "feeding-queen"
-      [
-        ifelse carrying = ""
-        [set current-action "gathering-honey"]
-        [
-          move-to one-of queens ;;have to do this as queen had to use move-to in order to birth the required eggs per tick
-          if carrying = "poisoned-honey"[ask one-of queens [set poisoned true]]
-          ask one-of queens [set energy (energy + honey-energy-gain)]
-          set carrying ""
-          set current-action ""
-        ]
-      ]
-
-      if current-action = "feeding-larvae"
-      [
-        ifelse any? larvae
-        [
-        if destination = "" or (destination != "" and destination = nobody)
-        [set destination one-of larvae with-min [energy]]
-
-        if destination != "" and not member? destination (larvae with-min [energy])
-        [set destination one-of larvae with-min [energy]]
-
-        ifelse [age] of destination < 3
-        [
-          ;;At below 3 they're fed on royal jelly so we dont' need honey
-          ifelse [patch-here] of destination = patch-here
-            [
-              ifelse [to-be-queen] of destination = true
-              [ask destination [set energy (energy + royal-jelly-energy-gain)]]
-              [ask destination [set energy (energy + worker-jelly-energy-gain)]]
-              set destination ""
-              set current-action ""
-              ]
-            [face destination fd 1]
-         ]
-        [
-          ifelse carrying = ""
-          [set current-action "gathering-honey" set destination ""]
-          [ifelse [patch-here] of destination = patch-here
-            [
-              ask destination [set energy (energy + honey-energy-gain)]
-              set carrying ""
-              set destination ""
-              set current-action ""
-              ]
-            [face destination fd 1]
-           ]
-          ]
-       ]
-       [set current-action "" set destination ""]]
-    ]]
-  ]
+      	  if current-action = "feeding-larvae"
+      	  [worker-feed-larvae]
+	]]]
 end
 
 to limit-energy
@@ -323,10 +392,9 @@ to death-check
   ask larvae
   [if energy <= 0
     [if pcolor = yellow [set pcolor gray] die]]
-end
 
-to-report any-honey?
-  report (any? patches with [pcolor = red] or any? patches with [pcolor = orange])
+  update-larvae-patches
+  update-empty-patches
 end
 
 to-report poison-check
@@ -336,8 +404,8 @@ end
 GRAPHICS-WINDOW
 1106
 14
-3019
-1948
+3017
+1926
 -1
 -1
 17.962
@@ -369,7 +437,7 @@ hive-size
 hive-size
 0
 500
-105
+105.0
 1
 1
 patches
@@ -401,7 +469,7 @@ max-energy-worker
 max-energy-worker
 0
 1000
-500
+500.0
 1
 1
 NIL
@@ -416,7 +484,7 @@ max-energy-queen
 max-energy-queen
 0
 1000
-500
+500.0
 1
 1
 NIL
@@ -431,7 +499,7 @@ max-energy-larvae
 max-energy-larvae
 0
 1000
-500
+500.0
 1
 1
 NIL
@@ -446,7 +514,7 @@ poison-strength-%
 poison-strength-%
 0
 99
-50
+50.0
 1
 1
 NIL
@@ -461,7 +529,7 @@ number-of-food-sources-poisoned
 number-of-food-sources-poisoned
 0
 4
-1
+0.0
 1
 1
 NIL
@@ -476,7 +544,7 @@ larvae-days-to-birth
 larvae-days-to-birth
 12
 21
-12
+12.0
 1
 1
 days
@@ -491,7 +559,7 @@ honey-energy-gain
 honey-energy-gain
 0
 500
-500
+500.0
 1
 1
 NIL
@@ -506,7 +574,7 @@ max-age-worker
 max-age-worker
 35
 49
-42
+42.0
 1
 1
 NIL
@@ -521,7 +589,7 @@ max-age-queen
 max-age-queen
 730
 1825
-903
+903.0
 10
 1
 NIL
@@ -683,7 +751,7 @@ actions-per-day
 actions-per-day
 240
 1008
-624
+624.0
 1
 1
 NIL
@@ -759,7 +827,7 @@ royal-jelly-energy-gain
 royal-jelly-energy-gain
 0
 500
-500
+500.0
 1
 1
 NIL
@@ -774,7 +842,7 @@ ticks-per-day
 ticks-per-day
 0
 100
-96
+96.0
 1
 1
 NIL
@@ -789,7 +857,7 @@ honey-uses
 honey-uses
 1
 100
-1
+1.0
 1
 1
 NIL
@@ -804,7 +872,7 @@ worker-jelly-energy-gain
 worker-jelly-energy-gain
 0
 500
-500
+500.0
 10
 1
 NIL
@@ -818,7 +886,35 @@ CHOOSER
 number-of-workers
 number-of-workers
 1500 3000 7000
+2
+
+BUTTON
+821
+15
+887
+48
+Profile
+setup                  ;; set up the model\nprofiler:start         ;; start profiling\nrepeat 30 [ go ]       ;; run something you want to measure\nprofiler:stop          ;; stop profiling\nprint profiler:report  ;; view the results\nprofiler:reset         ;; clear the data
+NIL
 1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SWITCH
+699
+433
+804
+468
+plots-on
+plots-on
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1251,12 +1347,338 @@ false
 0
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
-
 @#$#@#$#@
-NetLogo 5.3.1
-@#$#@#$#@
+NetLogo 6.0.2
 @#$#@#$#@
 @#$#@#$#@
+@#$#@#$#@
+<experiments>
+  <experiment name="bee-3000-no-poison" repetitions="3" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="4032"/>
+    <metric>count workers</metric>
+    <metric>count larvae</metric>
+    <metric>count queens</metric>
+    <enumeratedValueSet variable="honey-uses">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-larvae-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-age-worker">
+      <value value="42"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-larvae">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="poison-strength-%">
+      <value value="50"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-self-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ticks-per-day">
+      <value value="96"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="honey-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-age-queen">
+      <value value="903"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-worker">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="actions-per-day">
+      <value value="624"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-jelly-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="hive-size">
+      <value value="105"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="larvae-days-to-birth">
+      <value value="12"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-workers">
+      <value value="3000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-queen">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-queen-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-food-sources-poisoned">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="royal-jelly-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="bee-3000-50%" repetitions="3" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="4032"/>
+    <metric>count workers</metric>
+    <metric>count larvae</metric>
+    <metric>count queens</metric>
+    <enumeratedValueSet variable="honey-uses">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-larvae-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-age-worker">
+      <value value="42"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-larvae">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="poison-strength-%">
+      <value value="50"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-self-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ticks-per-day">
+      <value value="96"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="honey-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-age-queen">
+      <value value="903"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-worker">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="actions-per-day">
+      <value value="624"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-jelly-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="hive-size">
+      <value value="105"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="larvae-days-to-birth">
+      <value value="12"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-workers">
+      <value value="3000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-queen">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-queen-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-food-sources-poisoned">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="royal-jelly-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="bee-3000-55%" repetitions="3" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="4032"/>
+    <metric>count workers</metric>
+    <metric>count larvae</metric>
+    <metric>count queens</metric>
+    <enumeratedValueSet variable="honey-uses">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-larvae-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-age-worker">
+      <value value="42"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-larvae">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="poison-strength-%">
+      <value value="55"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-self-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ticks-per-day">
+      <value value="96"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="honey-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-age-queen">
+      <value value="903"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-worker">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="actions-per-day">
+      <value value="624"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-jelly-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="hive-size">
+      <value value="105"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="larvae-days-to-birth">
+      <value value="12"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-workers">
+      <value value="3000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-queen">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-queen-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-food-sources-poisoned">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="royal-jelly-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="bee-3000-60%" repetitions="3" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="4032"/>
+    <metric>count workers</metric>
+    <metric>count larvae</metric>
+    <metric>count queens</metric>
+    <enumeratedValueSet variable="honey-uses">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-larvae-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-age-worker">
+      <value value="42"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-larvae">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="poison-strength-%">
+      <value value="60"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-self-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ticks-per-day">
+      <value value="96"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="honey-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-age-queen">
+      <value value="903"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-worker">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="actions-per-day">
+      <value value="624"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-jelly-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="hive-size">
+      <value value="105"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="larvae-days-to-birth">
+      <value value="12"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-workers">
+      <value value="3000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-queen">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-queen-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-food-sources-poisoned">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="royal-jelly-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="bee-3000-65%" repetitions="3" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="4032"/>
+    <metric>count workers</metric>
+    <metric>count larvae</metric>
+    <metric>count queens</metric>
+    <enumeratedValueSet variable="honey-uses">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-larvae-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-age-worker">
+      <value value="42"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-larvae">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="poison-strength-%">
+      <value value="65"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-self-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ticks-per-day">
+      <value value="96"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="honey-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-age-queen">
+      <value value="903"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-worker">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="actions-per-day">
+      <value value="624"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-jelly-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="hive-size">
+      <value value="105"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="larvae-days-to-birth">
+      <value value="12"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-workers">
+      <value value="3000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-energy-queen">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="worker-feed-queen-threshold-%">
+      <value value="0.85"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-food-sources-poisoned">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="royal-jelly-energy-gain">
+      <value value="500"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
@@ -1269,7 +1691,6 @@ true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
-
 @#$#@#$#@
 0
 @#$#@#$#@
