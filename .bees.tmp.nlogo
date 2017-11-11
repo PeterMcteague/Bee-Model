@@ -7,8 +7,9 @@ breed [workers worker]
 queens-own [age energy poisoned destination]
 larvae-own [age energy poisoned to-be-queen]
 workers-own [age energy poisoned current-action carrying destination]
+patches-own [honey-patch-uses]
 
-globals [food-patches honey-patches dead-patches empty-patches larvae-patches center-patch free-central-patches]
+globals [food-patches honey-patches dead-patches empty-patches larvae-patches]
 
 to setup
   clear-all                           ;; clear the screen
@@ -43,7 +44,6 @@ to update-patch-agentset
   update-dead-patches
   update-empty-patches
   update-larvae-patches
-  update-free-central-patches
 end
 
 to setup-world
@@ -53,7 +53,6 @@ to setup-world
   ask patches with [pxcor = round(hive-size / 2)] [set pcolor black]
   ask patches with [pycor = 0 - round(hive-size / 2)] [set pcolor black]
   ask patches with [pycor = round(hive-size / 2)] [set pcolor black]
-  set center-patch patch 0 0
 end
 
 to setup-queen
@@ -92,14 +91,11 @@ to setup-food
   ask patches with [pxcor = round(hive-size / 2) and pycor = 0] [set pcolor blue]
   ask patches with [pycor = 0 - round(hive-size / 2) and pxcor = 0] [set pcolor blue]
   ask patches with [pycor = round(hive-size / 2) and pxcor = 0] [set pcolor blue]
+  ask patches [set honey-patch-uses 0]
   ask n-of number-of-food-sources-poisoned patches with [pcolor = blue] [set pcolor green]
 end
 
 ;;Main
-
-to update-free-central-patches
-  set free-central-patches (min-n-of 20 empty-patches [distance center-patch])
-end
 
 to go
   ifelse count turtles = 0
@@ -127,7 +123,6 @@ to queen-birth
   set destination ""
   update-empty-patches
   update-larvae-patches
-  update-free-central-patches
 end
 
 to queen-action
@@ -138,9 +133,15 @@ to queen-action
         ;;if no free spaces don't attempt anything
         ifelse not any? empty-patches
         [set destination ""]
+        [set destination (min-one-of (empty-patches with-min [distance patch 0 0]) [distance myself])] ;;Otherwise set destination to closest patch to middle of hive and to queen
 
+        ifelse destination != "" and member? destination empty-patches
         [
-          set destination (one-of free-central-patches)
+          move-to destination
+          queen-birth
+        ]
+        [
+          set destination (min-one-of (empty-patches with-min [distance patch 0 0]) [distance myself])
           move-to destination
           queen-birth
         ]
@@ -162,7 +163,6 @@ to larvae-action
         die]
       update-empty-patches
       update-larvae-patches
-      update-free-central-patches
      ]
   ]
 end
@@ -192,7 +192,7 @@ to worker-clean
     	[set destination (min-one-of dead-patches [distance myself])]
 
     	ifelse patch-here = destination
-    	[set pcolor yellow set current-action "" set destination "" update-dead-patches  update-empty-patches update-free-central-patches]
+    	[set pcolor yellow set current-action "" set destination "" update-dead-patches  update-empty-patches]
     	[face destination fd 1]
 	]
 	[set current-action "" set destination ""]
@@ -213,9 +213,9 @@ end
 to worker-store-food
   ifelse any? empty-patches
 	[
-    if destination = "" or not member? destination empty-patches
+    if destination = "" or (destination != "" and not member? destination empty-patches)
 	  [
-      set destination (one-of free-central-patches)
+      set destination (min-one-of (empty-patches with-min [distance patch 0 0]) [distance myself])
     ]
 
 	  ifelse patch-here = destination
@@ -224,9 +224,10 @@ to worker-store-food
     		[set pcolor orange]
     		[set pcolor red]
 
+    		ask patch-here [set honey-patch-uses honey-uses]
+
         update-honey-patches
         update-empty-patches
-        update-free-central-patches
     		set destination ""
     		set carrying ""
     		set current-action ""
@@ -259,9 +260,17 @@ to worker-gather-honey
 	  if [pcolor] of patch-here = red
 	  [set carrying "poisoned-honey"]
 
-    set pcolor yellow
-    update-honey-patches
-    update-empty-patches
+	  ask patch-here
+	  [
+		set honey-patch-uses (honey-patch-uses - 1)
+		if honey-patch-uses <= 0
+        [
+          set pcolor yellow
+          set honey-patch-uses 0
+          update-honey-patches
+          update-empty-patches
+        ]
+	  ]
 	  ]
 	[face destination fd 1]]
 end
@@ -335,24 +344,24 @@ to worker-action
     [set-current-action-worker]
 
     [if poison-check[
-    	  ;;Perform assigned action
-    	  if current-action = "cleaning"
-    	  [worker-clean]
+    	  ;;Performing assigned action
+      	  if current-action = "cleaning"
+      	  [worker-clean]
 
-    	  if current-action = "gathering-food"
-    	  [worker-gather-food]
+      	  if current-action = "gathering-food"
+      	  [worker-gather-food]
 
-    	  if current-action = "gathering-honey"
-    	  [worker-gather-honey]
+      	  if current-action = "gathering-honey"
+      	  [worker-gather-honey]
 
-    	  if current-action = "feeding-self"
-    	  [worker-feed-self]
+      	  if current-action = "feeding-self"
+      	  [worker-feed-self]
 
-    	  if current-action = "feeding-queen"
-    	  [worker-feed-queen]
+      	  if current-action = "feeding-queen"
+      	  [worker-feed-queen]
 
-    	  if current-action = "feeding-larvae"
-    	  [worker-feed-larvae]
+      	  if current-action = "feeding-larvae"
+      	  [worker-feed-larvae]
 	]]]
 end
 
@@ -395,8 +404,8 @@ end
 GRAPHICS-WINDOW
 1106
 14
-4184
-3093
+3032
+1942
 -1
 -1
 17.962
@@ -409,10 +418,10 @@ GRAPHICS-WINDOW
 0
 0
 1
--85
-85
--85
-85
+-53
+53
+-53
+53
 0
 0
 1
@@ -428,7 +437,7 @@ hive-size
 hive-size
 0
 500
-170.0
+105.0
 1
 1
 patches
@@ -840,6 +849,21 @@ NIL
 HORIZONTAL
 
 SLIDER
+12
+398
+184
+431
+honey-uses
+honey-uses
+1
+100
+1.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
 17
 810
 204
@@ -862,7 +886,7 @@ CHOOSER
 number-of-workers
 number-of-workers
 1500 3000 7000
-2
+1
 
 BUTTON
 821
@@ -885,7 +909,7 @@ SWITCH
 699
 433
 804
-466
+468
 plots-on
 plots-on
 1
